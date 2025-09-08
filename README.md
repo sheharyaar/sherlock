@@ -16,6 +16,7 @@ A simple syscall tracer written in C using `ptrace`. It can trace system calls m
 - [ ] Ptrace a child PID (running a command and tracing it)
 - [ ] Test various options of PID
 
+After the syscall tracer, I will work on add a debugger to Sherlock
 
 ### Resources
 
