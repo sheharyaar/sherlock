@@ -3,7 +3,7 @@ CC      := gcc
 CFLAGS  := -Wall -Wextra -O2
 LDFLAGS := 
 
-TARGET  := toy-tracer
+TARGET  := sherlock
 
 # Debug flag (default off)
 DEBUG ?= 0

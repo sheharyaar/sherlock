@@ -1,11 +1,11 @@
-## Toy Tracer
+## Sherlock
 
 A simple syscall tracer written in C using `ptrace`. It can trace system calls made by a program and print their names along with arguments and return values.
 
 ### Build and Run
 
 1. Build using: `make`. If you want to build in debug mode, use `make DEBUG=1`.
-2. Run the tracer with a target pid: `sudo ./toytracer <pid>`.
+2. Run the tracer with a target pid: `sudo ./sherlock <pid>`.
 
 ### TODO
 
