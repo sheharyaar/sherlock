@@ -1,4 +1,0 @@
-- [ ] Ptrace a PID
-	- [ ] Inspect registers or syscalls
-- [ ] Ptrace a child PID (running a command and tracing it)
-- [ ] Test various options of PID

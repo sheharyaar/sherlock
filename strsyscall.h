@@ -1,5 +1,5 @@
 #ifndef _STRSYSCALL_H
-#define _STRYSYSCALL_H
+#define _STRSYSCALL_H
 
 /* generate from the kernel using :
     $ make ARCH=x86_64 INSTALL_HDR_PATH=/tmp/khdr headers_install
@@ -393,9 +393,9 @@ char *syscall_str[] = {
 	[469] = "file_setattr",
 };
 
-static inline char *str_syscall(int i)
+static inline const char *str_syscall(int i)
 {
-	return i < sizeof(syscall_str) / sizeof(char *) ? syscall_str[i] :
+	return (unsigned long)i < sizeof(syscall_str) / sizeof(char *) ? syscall_str[i] :
 							  "invalid";
 }
 
