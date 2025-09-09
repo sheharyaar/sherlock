@@ -395,8 +395,9 @@ char *syscall_str[] = {
 
 static inline const char *str_syscall(int i)
 {
-	return (unsigned long)i < sizeof(syscall_str) / sizeof(char *) ? syscall_str[i] :
-							  "invalid";
+	return (unsigned long)i < sizeof(syscall_str) / sizeof(char *) ?
+		       syscall_str[i] :
+		       "invalid";
 }
 
 #endif

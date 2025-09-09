@@ -132,6 +132,8 @@ int main(int argc, char *argv[])
 		if (regs.rax == (unsigned long long)-ENOSYS) {
 			pr_info_raw("%s(", str_syscall(regs.orig_rax));
 			print_entry_args(&regs);
+
+			// TODO: Handle exit syscall which does not return
 		} else {
 			pr_info_raw(") = %lld", regs.rax);
 		}
