@@ -13,8 +13,8 @@ A simple syscall tracer written in C using `ptrace`. It can trace system calls m
 	- [X] Inspect registers or syscalls
 	- [ ] Print the syscalls arguments and return values in a human-readable format
 	- [ ] Inspect if sudo is always needed for running trace
-- [ ] Ptrace a child PID (running a command and tracing it)
-- [ ] Test various options of PID
+- [X] Ptrace a child PID (running a command and tracing it)
+- [X] Test various options of PID
 
 After the syscall tracer, I will work on add a debugger to Sherlock
 

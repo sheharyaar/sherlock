@@ -1,14 +1,14 @@
-#ifndef _STRSYSCALL_H
-#define _STRSYSCALL_H
+#ifndef _SYSCALL_LIST_H
+#define _SYSCALL_LIST_H
 
 /* generate from the kernel using :
     $ make ARCH=x86_64 INSTALL_HDR_PATH=/tmp/khdr headers_install
     and then using cut and awk to extract the names:
-    $ cat /tmp/khdr/include/asm/unistd_64.h | awk '{printf "[%d] = \"%s\",\n", $3, $2}'.
-    Remove the redundant `_ASM_UNISTD_64_H` entries in the top.
-}'
+    $ cat /tmp/khdr/include/asm/unistd_64.h | awk '{printf "[%d] = \"%s\",\n",
+   $3, $2}'.
+   Remove the redundant `_ASM_UNISTD_64_H` entries in the top.
 */
-char *syscall_str[] = {
+const char *const syscall_str[] = {
 	[0] = "read",
 	[1] = "write",
 	[2] = "open",
@@ -392,12 +392,5 @@ char *syscall_str[] = {
 	[468] = "file_getattr",
 	[469] = "file_setattr",
 };
-
-static inline const char *str_syscall(int i)
-{
-	return (unsigned long)i < sizeof(syscall_str) / sizeof(char *) ?
-		       syscall_str[i] :
-		       "invalid";
-}
 
 #endif
