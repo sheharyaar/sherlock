@@ -1,10 +1,19 @@
-/* generate from the kernel using :
-    $ make ARCH=x86_64 INSTALL_HDR_PATH=/tmp/khdr headers_install
-    and then using cut and awk to extract the names:
-    $ cat /tmp/khdr/include/asm/unistd_64.h | awk '{printf [%d] =
-    \%s\,\n,
-   $3, $2}'.
-   Remove the redundant `_ASM_UNISTD_64_H` entries in the top.
+/*
+ * Watson - System call tracer
+ * Part of the Sherlock project
+ *
+ * Copyright (c) 2025 Mohammad Shehar Yaar Tausif
+ *
+ * This file is licensed under the MIT License.
+ */
+
+/* generated from the kernel using :
+   $ make ARCH=x86_64 INSTALL_HDR_PATH=/tmp/khdr headers_install
+   and then using cut and awk to extract the names:
+   $ cat /tmp/khdr/include/asm/unistd_64.h | awk '{printf [%d] =
+   \%s\,\n,
+  $3, $2}'.
+  Remove the redundant `_ASM_UNISTD_64_H` entries in the top.
 */
 SYSCALL_DEFINE(0, read, NULL)
 SYSCALL_DEFINE(1, write, print_write)

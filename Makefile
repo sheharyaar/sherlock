@@ -1,3 +1,10 @@
+# Root Makefile
+# Part of the Sherlock project
+#
+# Copyright (c) 2025 Mohammad Shehar Yaar Tausif
+#
+# This file is licensed under the MIT License.
+
 SUBDIRS := watson irene
 BUILD_DIR := build
 

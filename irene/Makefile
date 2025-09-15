@@ -1,3 +1,10 @@
+# Irene Makefile
+# Part of the Sherlock project
+#
+# Copyright (c) 2025 Mohammad Shehar Yaar Tausif
+#
+# This file is licensed under the MIT License.
+
 # Compiler and flags
 CC      := gcc
 CFLAGS  := -Wall -Wextra -g

@@ -1,3 +1,12 @@
+/*
+ * Watson - System call tracer
+ * Part of the Sherlock project
+ *
+ * Copyright (c) 2025 Mohammad Shehar Yaar Tausif
+ *
+ * This file is licensed under the MIT License.
+ */
+
 #define _GNU_SOURCE
 #include "log.h"
 #include "syscall_defs.h"
