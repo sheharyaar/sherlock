@@ -9,6 +9,8 @@ This repository contains source code for the following tracers:
 2. `irene`: A library call tracer for Linux x86_64, inspired by `ltrace`.
 3. `sherlock`: A debugger for Linux x86_64, inspired by `gdb`.
 
+For notes and other information, please open the individual directories, which contain their own `README.md` files.
+
 > Note: At this point only `watson` is fully functional. `irene` and `sherlock` are still under development.
 
 ## Build
