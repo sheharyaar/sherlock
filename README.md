@@ -1,5 +1,7 @@
 # Sherlock Project
 
+> This project was **not** build using any LLMs. Only the Makefile and some parts of the README.md were generated using LLMs.
+
 The purpose of this project is to create a suite of tracing and debugging tools for Linux x86_64 systems. The tools are inspired by popular existing tools like `strace`, `ltrace`, and `gdb`, but are implemented from scratch to provide a deeper understanding of how these tools work under the hood.
 
 > These projects will accompany a series of blog posts that will explain the implementation details and the concepts involved in building them. I will also try to do a kernel study to understand how the Linux kernel supports these functionalities.
