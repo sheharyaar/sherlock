@@ -1,6 +1,6 @@
 # Compiler and flags
 CC      := gcc
-CFLAGS  := -Wall -Wextra -O2
+CFLAGS  := -Wall -Wextra -g
 LDFLAGS := 
 
 TARGET  := sherlock
@@ -12,7 +12,9 @@ ifeq ($(DEBUG),1)
 endif
 
 # Sources and objects
-SRC  := $(wildcard *.c)
+SRC  := $(wildcard *.c) \
+		$(wildcard helpers/*.c)
+
 HEADERS := $(wildcard *.h)
 OBJ  := $(SRC:.c=.o)
 

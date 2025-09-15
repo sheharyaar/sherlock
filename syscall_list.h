@@ -1,396 +1,390 @@
-#ifndef _SYSCALL_LIST_H
-#define _SYSCALL_LIST_H
-
 /* generate from the kernel using :
     $ make ARCH=x86_64 INSTALL_HDR_PATH=/tmp/khdr headers_install
     and then using cut and awk to extract the names:
-    $ cat /tmp/khdr/include/asm/unistd_64.h | awk '{printf "[%d] = \"%s\",\n",
+    $ cat /tmp/khdr/include/asm/unistd_64.h | awk '{printf [%d] =
+    \%s\,\n,
    $3, $2}'.
    Remove the redundant `_ASM_UNISTD_64_H` entries in the top.
 */
-const char *const syscall_str[] = {
-	[0] = "read",
-	[1] = "write",
-	[2] = "open",
-	[3] = "close",
-	[4] = "stat",
-	[5] = "fstat",
-	[6] = "lstat",
-	[7] = "poll",
-	[8] = "lseek",
-	[9] = "mmap",
-	[10] = "mprotect",
-	[11] = "munmap",
-	[12] = "brk",
-	[13] = "rt_sigaction",
-	[14] = "rt_sigprocmask",
-	[15] = "rt_sigreturn",
-	[16] = "ioctl",
-	[17] = "pread64",
-	[18] = "pwrite64",
-	[19] = "readv",
-	[20] = "writev",
-	[21] = "access",
-	[22] = "pipe",
-	[23] = "select",
-	[24] = "sched_yield",
-	[25] = "mremap",
-	[26] = "msync",
-	[27] = "mincore",
-	[28] = "madvise",
-	[29] = "shmget",
-	[30] = "shmat",
-	[31] = "shmctl",
-	[32] = "dup",
-	[33] = "dup2",
-	[34] = "pause",
-	[35] = "nanosleep",
-	[36] = "getitimer",
-	[37] = "alarm",
-	[38] = "setitimer",
-	[39] = "getpid",
-	[40] = "sendfile",
-	[41] = "socket",
-	[42] = "connect",
-	[43] = "accept",
-	[44] = "sendto",
-	[45] = "recvfrom",
-	[46] = "sendmsg",
-	[47] = "recvmsg",
-	[48] = "shutdown",
-	[49] = "bind",
-	[50] = "listen",
-	[51] = "getsockname",
-	[52] = "getpeername",
-	[53] = "socketpair",
-	[54] = "setsockopt",
-	[55] = "getsockopt",
-	[56] = "clone",
-	[57] = "fork",
-	[58] = "vfork",
-	[59] = "execve",
-	[60] = "exit",
-	[61] = "wait4",
-	[62] = "kill",
-	[63] = "uname",
-	[64] = "semget",
-	[65] = "semop",
-	[66] = "semctl",
-	[67] = "shmdt",
-	[68] = "msgget",
-	[69] = "msgsnd",
-	[70] = "msgrcv",
-	[71] = "msgctl",
-	[72] = "fcntl",
-	[73] = "flock",
-	[74] = "fsync",
-	[75] = "fdatasync",
-	[76] = "truncate",
-	[77] = "ftruncate",
-	[78] = "getdents",
-	[79] = "getcwd",
-	[80] = "chdir",
-	[81] = "fchdir",
-	[82] = "rename",
-	[83] = "mkdir",
-	[84] = "rmdir",
-	[85] = "creat",
-	[86] = "link",
-	[87] = "unlink",
-	[88] = "symlink",
-	[89] = "readlink",
-	[90] = "chmod",
-	[91] = "fchmod",
-	[92] = "chown",
-	[93] = "fchown",
-	[94] = "lchown",
-	[95] = "umask",
-	[96] = "gettimeofday",
-	[97] = "getrlimit",
-	[98] = "getrusage",
-	[99] = "sysinfo",
-	[100] = "times",
-	[101] = "ptrace",
-	[102] = "getuid",
-	[103] = "syslog",
-	[104] = "getgid",
-	[105] = "setuid",
-	[106] = "setgid",
-	[107] = "geteuid",
-	[108] = "getegid",
-	[109] = "setpgid",
-	[110] = "getppid",
-	[111] = "getpgrp",
-	[112] = "setsid",
-	[113] = "setreuid",
-	[114] = "setregid",
-	[115] = "getgroups",
-	[116] = "setgroups",
-	[117] = "setresuid",
-	[118] = "getresuid",
-	[119] = "setresgid",
-	[120] = "getresgid",
-	[121] = "getpgid",
-	[122] = "setfsuid",
-	[123] = "setfsgid",
-	[124] = "getsid",
-	[125] = "capget",
-	[126] = "capset",
-	[127] = "rt_sigpending",
-	[128] = "rt_sigtimedwait",
-	[129] = "rt_sigqueueinfo",
-	[130] = "rt_sigsuspend",
-	[131] = "sigaltstack",
-	[132] = "utime",
-	[133] = "mknod",
-	[134] = "uselib",
-	[135] = "personality",
-	[136] = "ustat",
-	[137] = "statfs",
-	[138] = "fstatfs",
-	[139] = "sysfs",
-	[140] = "getpriority",
-	[141] = "setpriority",
-	[142] = "sched_setparam",
-	[143] = "sched_getparam",
-	[144] = "sched_setscheduler",
-	[145] = "sched_getscheduler",
-	[146] = "sched_get_priority_max",
-	[147] = "sched_get_priority_min",
-	[148] = "sched_rr_get_interval",
-	[149] = "mlock",
-	[150] = "munlock",
-	[151] = "mlockall",
-	[152] = "munlockall",
-	[153] = "vhangup",
-	[154] = "modify_ldt",
-	[155] = "pivot_root",
-	[156] = "_sysctl",
-	[157] = "prctl",
-	[158] = "arch_prctl",
-	[159] = "adjtimex",
-	[160] = "setrlimit",
-	[161] = "chroot",
-	[162] = "sync",
-	[163] = "acct",
-	[164] = "settimeofday",
-	[165] = "mount",
-	[166] = "umount2",
-	[167] = "swapon",
-	[168] = "swapoff",
-	[169] = "reboot",
-	[170] = "sethostname",
-	[171] = "setdomainname",
-	[172] = "iopl",
-	[173] = "ioperm",
-	[174] = "create_module",
-	[175] = "init_module",
-	[176] = "delete_module",
-	[177] = "get_kernel_syms",
-	[178] = "query_module",
-	[179] = "quotactl",
-	[180] = "nfsservctl",
-	[181] = "getpmsg",
-	[182] = "putpmsg",
-	[183] = "afs_syscall",
-	[184] = "tuxcall",
-	[185] = "security",
-	[186] = "gettid",
-	[187] = "readahead",
-	[188] = "setxattr",
-	[189] = "lsetxattr",
-	[190] = "fsetxattr",
-	[191] = "getxattr",
-	[192] = "lgetxattr",
-	[193] = "fgetxattr",
-	[194] = "listxattr",
-	[195] = "llistxattr",
-	[196] = "flistxattr",
-	[197] = "removexattr",
-	[198] = "lremovexattr",
-	[199] = "fremovexattr",
-	[200] = "tkill",
-	[201] = "time",
-	[202] = "futex",
-	[203] = "sched_setaffinity",
-	[204] = "sched_getaffinity",
-	[205] = "set_thread_area",
-	[206] = "io_setup",
-	[207] = "io_destroy",
-	[208] = "io_getevents",
-	[209] = "io_submit",
-	[210] = "io_cancel",
-	[211] = "get_thread_area",
-	[212] = "lookup_dcookie",
-	[213] = "epoll_create",
-	[214] = "epoll_ctl_old",
-	[215] = "epoll_wait_old",
-	[216] = "remap_file_pages",
-	[217] = "getdents64",
-	[218] = "set_tid_address",
-	[219] = "restart_syscall",
-	[220] = "semtimedop",
-	[221] = "fadvise64",
-	[222] = "timer_create",
-	[223] = "timer_settime",
-	[224] = "timer_gettime",
-	[225] = "timer_getoverrun",
-	[226] = "timer_delete",
-	[227] = "clock_settime",
-	[228] = "clock_gettime",
-	[229] = "clock_getres",
-	[230] = "clock_nanosleep",
-	[231] = "exit_group",
-	[232] = "epoll_wait",
-	[233] = "epoll_ctl",
-	[234] = "tgkill",
-	[235] = "utimes",
-	[236] = "vserver",
-	[237] = "mbind",
-	[238] = "set_mempolicy",
-	[239] = "get_mempolicy",
-	[240] = "mq_open",
-	[241] = "mq_unlink",
-	[242] = "mq_timedsend",
-	[243] = "mq_timedreceive",
-	[244] = "mq_notify",
-	[245] = "mq_getsetattr",
-	[246] = "kexec_load",
-	[247] = "waitid",
-	[248] = "add_key",
-	[249] = "request_key",
-	[250] = "keyctl",
-	[251] = "ioprio_set",
-	[252] = "ioprio_get",
-	[253] = "inotify_init",
-	[254] = "inotify_add_watch",
-	[255] = "inotify_rm_watch",
-	[256] = "migrate_pages",
-	[257] = "openat",
-	[258] = "mkdirat",
-	[259] = "mknodat",
-	[260] = "fchownat",
-	[261] = "futimesat",
-	[262] = "newfstatat",
-	[263] = "unlinkat",
-	[264] = "renameat",
-	[265] = "linkat",
-	[266] = "symlinkat",
-	[267] = "readlinkat",
-	[268] = "fchmodat",
-	[269] = "faccessat",
-	[270] = "pselect6",
-	[271] = "ppoll",
-	[272] = "unshare",
-	[273] = "set_robust_list",
-	[274] = "get_robust_list",
-	[275] = "splice",
-	[276] = "tee",
-	[277] = "sync_file_range",
-	[278] = "vmsplice",
-	[279] = "move_pages",
-	[280] = "utimensat",
-	[281] = "epoll_pwait",
-	[282] = "signalfd",
-	[283] = "timerfd_create",
-	[284] = "eventfd",
-	[285] = "fallocate",
-	[286] = "timerfd_settime",
-	[287] = "timerfd_gettime",
-	[288] = "accept4",
-	[289] = "signalfd4",
-	[290] = "eventfd2",
-	[291] = "epoll_create1",
-	[292] = "dup3",
-	[293] = "pipe2",
-	[294] = "inotify_init1",
-	[295] = "preadv",
-	[296] = "pwritev",
-	[297] = "rt_tgsigqueueinfo",
-	[298] = "perf_event_open",
-	[299] = "recvmmsg",
-	[300] = "fanotify_init",
-	[301] = "fanotify_mark",
-	[302] = "prlimit64",
-	[303] = "name_to_handle_at",
-	[304] = "open_by_handle_at",
-	[305] = "clock_adjtime",
-	[306] = "syncfs",
-	[307] = "sendmmsg",
-	[308] = "setns",
-	[309] = "getcpu",
-	[310] = "process_vm_readv",
-	[311] = "process_vm_writev",
-	[312] = "kcmp",
-	[313] = "finit_module",
-	[314] = "sched_setattr",
-	[315] = "sched_getattr",
-	[316] = "renameat2",
-	[317] = "seccomp",
-	[318] = "getrandom",
-	[319] = "memfd_create",
-	[320] = "kexec_file_load",
-	[321] = "bpf",
-	[322] = "execveat",
-	[323] = "userfaultfd",
-	[324] = "membarrier",
-	[325] = "mlock2",
-	[326] = "copy_file_range",
-	[327] = "preadv2",
-	[328] = "pwritev2",
-	[329] = "pkey_mprotect",
-	[330] = "pkey_alloc",
-	[331] = "pkey_free",
-	[332] = "statx",
-	[333] = "io_pgetevents",
-	[334] = "rseq",
-	[335] = "uretprobe",
-	[424] = "pidfd_send_signal",
-	[425] = "io_uring_setup",
-	[426] = "io_uring_enter",
-	[427] = "io_uring_register",
-	[428] = "open_tree",
-	[429] = "move_mount",
-	[430] = "fsopen",
-	[431] = "fsconfig",
-	[432] = "fsmount",
-	[433] = "fspick",
-	[434] = "pidfd_open",
-	[435] = "clone3",
-	[436] = "close_range",
-	[437] = "openat2",
-	[438] = "pidfd_getfd",
-	[439] = "faccessat2",
-	[440] = "process_madvise",
-	[441] = "epoll_pwait2",
-	[442] = "mount_setattr",
-	[443] = "quotactl_fd",
-	[444] = "landlock_create_ruleset",
-	[445] = "landlock_add_rule",
-	[446] = "landlock_restrict_self",
-	[447] = "memfd_secret",
-	[448] = "process_mrelease",
-	[449] = "futex_waitv",
-	[450] = "set_mempolicy_home_node",
-	[451] = "cachestat",
-	[452] = "fchmodat2",
-	[453] = "map_shadow_stack",
-	[454] = "futex_wake",
-	[455] = "futex_wait",
-	[456] = "futex_requeue",
-	[457] = "statmount",
-	[458] = "listmount",
-	[459] = "lsm_get_self_attr",
-	[460] = "lsm_set_self_attr",
-	[461] = "lsm_list_modules",
-	[462] = "mseal",
-	[463] = "setxattrat",
-	[464] = "getxattrat",
-	[465] = "listxattrat",
-	[466] = "removexattrat",
-	[467] = "open_tree_attr",
-	[468] = "file_getattr",
-	[469] = "file_setattr",
-};
-
-#endif
+SYSCALL_DEFINE(0, read, NULL)
+SYSCALL_DEFINE(1, write, print_write)
+SYSCALL_DEFINE(2, open, NULL)
+SYSCALL_DEFINE(3, close, NULL)
+SYSCALL_DEFINE(4, stat, NULL)
+SYSCALL_DEFINE(5, fstat, NULL)
+SYSCALL_DEFINE(6, lstat, NULL)
+SYSCALL_DEFINE(7, poll, NULL)
+SYSCALL_DEFINE(8, lseek, NULL)
+SYSCALL_DEFINE(9, mmap, NULL)
+SYSCALL_DEFINE(10, mprotect, NULL)
+SYSCALL_DEFINE(11, munmap, NULL)
+SYSCALL_DEFINE(12, brk, NULL)
+SYSCALL_DEFINE(13, rt_sigaction, NULL)
+SYSCALL_DEFINE(14, rt_sigprocmask, NULL)
+SYSCALL_DEFINE(15, rt_sigreturn, NULL)
+SYSCALL_DEFINE(16, ioctl, NULL)
+SYSCALL_DEFINE(17, pread64, NULL)
+SYSCALL_DEFINE(18, pwrite64, NULL)
+SYSCALL_DEFINE(19, readv, NULL)
+SYSCALL_DEFINE(20, writev, NULL)
+SYSCALL_DEFINE(21, access, NULL)
+SYSCALL_DEFINE(22, pipe, NULL)
+SYSCALL_DEFINE(23, select, NULL)
+SYSCALL_DEFINE(24, sched_yield, NULL)
+SYSCALL_DEFINE(25, mremap, NULL)
+SYSCALL_DEFINE(26, msync, NULL)
+SYSCALL_DEFINE(27, mincore, NULL)
+SYSCALL_DEFINE(28, madvise, NULL)
+SYSCALL_DEFINE(29, shmget, NULL)
+SYSCALL_DEFINE(30, shmat, NULL)
+SYSCALL_DEFINE(31, shmctl, NULL)
+SYSCALL_DEFINE(32, dup, NULL)
+SYSCALL_DEFINE(33, dup2, NULL)
+SYSCALL_DEFINE(34, pause, NULL)
+SYSCALL_DEFINE(35, nanosleep, NULL)
+SYSCALL_DEFINE(36, getitimer, NULL)
+SYSCALL_DEFINE(37, alarm, NULL)
+SYSCALL_DEFINE(38, setitimer, NULL)
+SYSCALL_DEFINE(39, getpid, NULL)
+SYSCALL_DEFINE(40, sendfile, NULL)
+SYSCALL_DEFINE(41, socket, NULL)
+SYSCALL_DEFINE(42, connect, NULL)
+SYSCALL_DEFINE(43, accept, NULL)
+SYSCALL_DEFINE(44, sendto, NULL)
+SYSCALL_DEFINE(45, recvfrom, NULL)
+SYSCALL_DEFINE(46, sendmsg, NULL)
+SYSCALL_DEFINE(47, recvmsg, NULL)
+SYSCALL_DEFINE(48, shutdown, NULL)
+SYSCALL_DEFINE(49, bind, NULL)
+SYSCALL_DEFINE(50, listen, NULL)
+SYSCALL_DEFINE(51, getsockname, NULL)
+SYSCALL_DEFINE(52, getpeername, NULL)
+SYSCALL_DEFINE(53, socketpair, NULL)
+SYSCALL_DEFINE(54, setsockopt, NULL)
+SYSCALL_DEFINE(55, getsockopt, NULL)
+SYSCALL_DEFINE(56, clone, NULL)
+SYSCALL_DEFINE(57, fork, NULL)
+SYSCALL_DEFINE(58, vfork, NULL)
+SYSCALL_DEFINE(59, execve, NULL)
+SYSCALL_DEFINE(60, exit, NULL)
+SYSCALL_DEFINE(61, wait4, NULL)
+SYSCALL_DEFINE(62, kill, NULL)
+SYSCALL_DEFINE(63, uname, NULL)
+SYSCALL_DEFINE(64, semget, NULL)
+SYSCALL_DEFINE(65, semop, NULL)
+SYSCALL_DEFINE(66, semctl, NULL)
+SYSCALL_DEFINE(67, shmdt, NULL)
+SYSCALL_DEFINE(68, msgget, NULL)
+SYSCALL_DEFINE(69, msgsnd, NULL)
+SYSCALL_DEFINE(70, msgrcv, NULL)
+SYSCALL_DEFINE(71, msgctl, NULL)
+SYSCALL_DEFINE(72, fcntl, NULL)
+SYSCALL_DEFINE(73, flock, NULL)
+SYSCALL_DEFINE(74, fsync, NULL)
+SYSCALL_DEFINE(75, fdatasync, NULL)
+SYSCALL_DEFINE(76, truncate, NULL)
+SYSCALL_DEFINE(77, ftruncate, NULL)
+SYSCALL_DEFINE(78, getdents, NULL)
+SYSCALL_DEFINE(79, getcwd, NULL)
+SYSCALL_DEFINE(80, chdir, NULL)
+SYSCALL_DEFINE(81, fchdir, NULL)
+SYSCALL_DEFINE(82, rename, NULL)
+SYSCALL_DEFINE(83, mkdir, NULL)
+SYSCALL_DEFINE(84, rmdir, NULL)
+SYSCALL_DEFINE(85, creat, NULL)
+SYSCALL_DEFINE(86, link, NULL)
+SYSCALL_DEFINE(87, unlink, NULL)
+SYSCALL_DEFINE(88, symlink, NULL)
+SYSCALL_DEFINE(89, readlink, NULL)
+SYSCALL_DEFINE(90, chmod, NULL)
+SYSCALL_DEFINE(91, fchmod, NULL)
+SYSCALL_DEFINE(92, chown, NULL)
+SYSCALL_DEFINE(93, fchown, NULL)
+SYSCALL_DEFINE(94, lchown, NULL)
+SYSCALL_DEFINE(95, umask, NULL)
+SYSCALL_DEFINE(96, gettimeofday, NULL)
+SYSCALL_DEFINE(97, getrlimit, NULL)
+SYSCALL_DEFINE(98, getrusage, NULL)
+SYSCALL_DEFINE(99, sysinfo, NULL)
+SYSCALL_DEFINE(100, times, NULL)
+SYSCALL_DEFINE(101, ptrace, NULL)
+SYSCALL_DEFINE(102, getuid, NULL)
+SYSCALL_DEFINE(103, syslog, NULL)
+SYSCALL_DEFINE(104, getgid, NULL)
+SYSCALL_DEFINE(105, setuid, NULL)
+SYSCALL_DEFINE(106, setgid, NULL)
+SYSCALL_DEFINE(107, geteuid, NULL)
+SYSCALL_DEFINE(108, getegid, NULL)
+SYSCALL_DEFINE(109, setpgid, NULL)
+SYSCALL_DEFINE(110, getppid, NULL)
+SYSCALL_DEFINE(111, getpgrp, NULL)
+SYSCALL_DEFINE(112, setsid, NULL)
+SYSCALL_DEFINE(113, setreuid, NULL)
+SYSCALL_DEFINE(114, setregid, NULL)
+SYSCALL_DEFINE(115, getgroups, NULL)
+SYSCALL_DEFINE(116, setgroups, NULL)
+SYSCALL_DEFINE(117, setresuid, NULL)
+SYSCALL_DEFINE(118, getresuid, NULL)
+SYSCALL_DEFINE(119, setresgid, NULL)
+SYSCALL_DEFINE(120, getresgid, NULL)
+SYSCALL_DEFINE(121, getpgid, NULL)
+SYSCALL_DEFINE(122, setfsuid, NULL)
+SYSCALL_DEFINE(123, setfsgid, NULL)
+SYSCALL_DEFINE(124, getsid, NULL)
+SYSCALL_DEFINE(125, capget, NULL)
+SYSCALL_DEFINE(126, capset, NULL)
+SYSCALL_DEFINE(127, rt_sigpending, NULL)
+SYSCALL_DEFINE(128, rt_sigtimedwait, NULL)
+SYSCALL_DEFINE(129, rt_sigqueueinfo, NULL)
+SYSCALL_DEFINE(130, rt_sigsuspend, NULL)
+SYSCALL_DEFINE(131, sigaltstack, NULL)
+SYSCALL_DEFINE(132, utime, NULL)
+SYSCALL_DEFINE(133, mknod, NULL)
+SYSCALL_DEFINE(134, uselib, NULL)
+SYSCALL_DEFINE(135, personality, NULL)
+SYSCALL_DEFINE(136, ustat, NULL)
+SYSCALL_DEFINE(137, statfs, NULL)
+SYSCALL_DEFINE(138, fstatfs, NULL)
+SYSCALL_DEFINE(139, sysfs, NULL)
+SYSCALL_DEFINE(140, getpriority, NULL)
+SYSCALL_DEFINE(141, setpriority, NULL)
+SYSCALL_DEFINE(142, sched_setparam, NULL)
+SYSCALL_DEFINE(143, sched_getparam, NULL)
+SYSCALL_DEFINE(144, sched_setscheduler, NULL)
+SYSCALL_DEFINE(145, sched_getscheduler, NULL)
+SYSCALL_DEFINE(146, sched_get_priority_max, NULL)
+SYSCALL_DEFINE(147, sched_get_priority_min, NULL)
+SYSCALL_DEFINE(148, sched_rr_get_interval, NULL)
+SYSCALL_DEFINE(149, mlock, NULL)
+SYSCALL_DEFINE(150, munlock, NULL)
+SYSCALL_DEFINE(151, mlockall, NULL)
+SYSCALL_DEFINE(152, munlockall, NULL)
+SYSCALL_DEFINE(153, vhangup, NULL)
+SYSCALL_DEFINE(154, modify_ldt, NULL)
+SYSCALL_DEFINE(155, pivot_root, NULL)
+SYSCALL_DEFINE(156, _sysctl, NULL)
+SYSCALL_DEFINE(157, prctl, NULL)
+SYSCALL_DEFINE(158, arch_prctl, NULL)
+SYSCALL_DEFINE(159, adjtimex, NULL)
+SYSCALL_DEFINE(160, setrlimit, NULL)
+SYSCALL_DEFINE(161, chroot, NULL)
+SYSCALL_DEFINE(162, sync, NULL)
+SYSCALL_DEFINE(163, acct, NULL)
+SYSCALL_DEFINE(164, settimeofday, NULL)
+SYSCALL_DEFINE(165, mount, NULL)
+SYSCALL_DEFINE(166, umount2, NULL)
+SYSCALL_DEFINE(167, swapon, NULL)
+SYSCALL_DEFINE(168, swapoff, NULL)
+SYSCALL_DEFINE(169, reboot, NULL)
+SYSCALL_DEFINE(170, sethostname, NULL)
+SYSCALL_DEFINE(171, setdomainname, NULL)
+SYSCALL_DEFINE(172, iopl, NULL)
+SYSCALL_DEFINE(173, ioperm, NULL)
+SYSCALL_DEFINE(174, create_module, NULL)
+SYSCALL_DEFINE(175, init_module, NULL)
+SYSCALL_DEFINE(176, delete_module, NULL)
+SYSCALL_DEFINE(177, get_kernel_syms, NULL)
+SYSCALL_DEFINE(178, query_module, NULL)
+SYSCALL_DEFINE(179, quotactl, NULL)
+SYSCALL_DEFINE(180, nfsservctl, NULL)
+SYSCALL_DEFINE(181, getpmsg, NULL)
+SYSCALL_DEFINE(182, putpmsg, NULL)
+SYSCALL_DEFINE(183, afs_syscall, NULL)
+SYSCALL_DEFINE(184, tuxcall, NULL)
+SYSCALL_DEFINE(185, security, NULL)
+SYSCALL_DEFINE(186, gettid, NULL)
+SYSCALL_DEFINE(187, readahead, NULL)
+SYSCALL_DEFINE(188, setxattr, NULL)
+SYSCALL_DEFINE(189, lsetxattr, NULL)
+SYSCALL_DEFINE(190, fsetxattr, NULL)
+SYSCALL_DEFINE(191, getxattr, NULL)
+SYSCALL_DEFINE(192, lgetxattr, NULL)
+SYSCALL_DEFINE(193, fgetxattr, NULL)
+SYSCALL_DEFINE(194, listxattr, NULL)
+SYSCALL_DEFINE(195, llistxattr, NULL)
+SYSCALL_DEFINE(196, flistxattr, NULL)
+SYSCALL_DEFINE(197, removexattr, NULL)
+SYSCALL_DEFINE(198, lremovexattr, NULL)
+SYSCALL_DEFINE(199, fremovexattr, NULL)
+SYSCALL_DEFINE(200, tkill, NULL)
+SYSCALL_DEFINE(201, time, NULL)
+SYSCALL_DEFINE(202, futex, NULL)
+SYSCALL_DEFINE(203, sched_setaffinity, NULL)
+SYSCALL_DEFINE(204, sched_getaffinity, NULL)
+SYSCALL_DEFINE(205, set_thread_area, NULL)
+SYSCALL_DEFINE(206, io_setup, NULL)
+SYSCALL_DEFINE(207, io_destroy, NULL)
+SYSCALL_DEFINE(208, io_getevents, NULL)
+SYSCALL_DEFINE(209, io_submit, NULL)
+SYSCALL_DEFINE(210, io_cancel, NULL)
+SYSCALL_DEFINE(211, get_thread_area, NULL)
+SYSCALL_DEFINE(212, lookup_dcookie, NULL)
+SYSCALL_DEFINE(213, epoll_create, NULL)
+SYSCALL_DEFINE(214, epoll_ctl_old, NULL)
+SYSCALL_DEFINE(215, epoll_wait_old, NULL)
+SYSCALL_DEFINE(216, remap_file_pages, NULL)
+SYSCALL_DEFINE(217, getdents64, NULL)
+SYSCALL_DEFINE(218, set_tid_address, NULL)
+SYSCALL_DEFINE(219, restart_syscall, NULL)
+SYSCALL_DEFINE(220, semtimedop, NULL)
+SYSCALL_DEFINE(221, fadvise64, NULL)
+SYSCALL_DEFINE(222, timer_create, NULL)
+SYSCALL_DEFINE(223, timer_settime, NULL)
+SYSCALL_DEFINE(224, timer_gettime, NULL)
+SYSCALL_DEFINE(225, timer_getoverrun, NULL)
+SYSCALL_DEFINE(226, timer_delete, NULL)
+SYSCALL_DEFINE(227, clock_settime, NULL)
+SYSCALL_DEFINE(228, clock_gettime, NULL)
+SYSCALL_DEFINE(229, clock_getres, NULL)
+SYSCALL_DEFINE(230, clock_nanosleep, NULL)
+SYSCALL_DEFINE(231, exit_group, NULL)
+SYSCALL_DEFINE(232, epoll_wait, NULL)
+SYSCALL_DEFINE(233, epoll_ctl, NULL)
+SYSCALL_DEFINE(234, tgkill, NULL)
+SYSCALL_DEFINE(235, utimes, NULL)
+SYSCALL_DEFINE(236, vserver, NULL)
+SYSCALL_DEFINE(237, mbind, NULL)
+SYSCALL_DEFINE(238, set_mempolicy, NULL)
+SYSCALL_DEFINE(239, get_mempolicy, NULL)
+SYSCALL_DEFINE(240, mq_open, NULL)
+SYSCALL_DEFINE(241, mq_unlink, NULL)
+SYSCALL_DEFINE(242, mq_timedsend, NULL)
+SYSCALL_DEFINE(243, mq_timedreceive, NULL)
+SYSCALL_DEFINE(244, mq_notify, NULL)
+SYSCALL_DEFINE(245, mq_getsetattr, NULL)
+SYSCALL_DEFINE(246, kexec_load, NULL)
+SYSCALL_DEFINE(247, waitid, NULL)
+SYSCALL_DEFINE(248, add_key, NULL)
+SYSCALL_DEFINE(249, request_key, NULL)
+SYSCALL_DEFINE(250, keyctl, NULL)
+SYSCALL_DEFINE(251, ioprio_set, NULL)
+SYSCALL_DEFINE(252, ioprio_get, NULL)
+SYSCALL_DEFINE(253, inotify_init, NULL)
+SYSCALL_DEFINE(254, inotify_add_watch, NULL)
+SYSCALL_DEFINE(255, inotify_rm_watch, NULL)
+SYSCALL_DEFINE(256, migrate_pages, NULL)
+SYSCALL_DEFINE(257, openat, NULL)
+SYSCALL_DEFINE(258, mkdirat, NULL)
+SYSCALL_DEFINE(259, mknodat, NULL)
+SYSCALL_DEFINE(260, fchownat, NULL)
+SYSCALL_DEFINE(261, futimesat, NULL)
+SYSCALL_DEFINE(262, newfstatat, NULL)
+SYSCALL_DEFINE(263, unlinkat, NULL)
+SYSCALL_DEFINE(264, renameat, NULL)
+SYSCALL_DEFINE(265, linkat, NULL)
+SYSCALL_DEFINE(266, symlinkat, NULL)
+SYSCALL_DEFINE(267, readlinkat, NULL)
+SYSCALL_DEFINE(268, fchmodat, NULL)
+SYSCALL_DEFINE(269, faccessat, NULL)
+SYSCALL_DEFINE(270, pselect6, NULL)
+SYSCALL_DEFINE(271, ppoll, NULL)
+SYSCALL_DEFINE(272, unshare, NULL)
+SYSCALL_DEFINE(273, set_robust_list, NULL)
+SYSCALL_DEFINE(274, get_robust_list, NULL)
+SYSCALL_DEFINE(275, splice, NULL)
+SYSCALL_DEFINE(276, tee, NULL)
+SYSCALL_DEFINE(277, sync_file_range, NULL)
+SYSCALL_DEFINE(278, vmsplice, NULL)
+SYSCALL_DEFINE(279, move_pages, NULL)
+SYSCALL_DEFINE(280, utimensat, NULL)
+SYSCALL_DEFINE(281, epoll_pwait, NULL)
+SYSCALL_DEFINE(282, signalfd, NULL)
+SYSCALL_DEFINE(283, timerfd_create, NULL)
+SYSCALL_DEFINE(284, eventfd, NULL)
+SYSCALL_DEFINE(285, fallocate, NULL)
+SYSCALL_DEFINE(286, timerfd_settime, NULL)
+SYSCALL_DEFINE(287, timerfd_gettime, NULL)
+SYSCALL_DEFINE(288, accept4, NULL)
+SYSCALL_DEFINE(289, signalfd4, NULL)
+SYSCALL_DEFINE(290, eventfd2, NULL)
+SYSCALL_DEFINE(291, epoll_create1, NULL)
+SYSCALL_DEFINE(292, dup3, NULL)
+SYSCALL_DEFINE(293, pipe2, NULL)
+SYSCALL_DEFINE(294, inotify_init1, NULL)
+SYSCALL_DEFINE(295, preadv, NULL)
+SYSCALL_DEFINE(296, pwritev, NULL)
+SYSCALL_DEFINE(297, rt_tgsigqueueinfo, NULL)
+SYSCALL_DEFINE(298, perf_event_open, NULL)
+SYSCALL_DEFINE(299, recvmmsg, NULL)
+SYSCALL_DEFINE(300, fanotify_init, NULL)
+SYSCALL_DEFINE(301, fanotify_mark, NULL)
+SYSCALL_DEFINE(302, prlimit64, NULL)
+SYSCALL_DEFINE(303, name_to_handle_at, NULL)
+SYSCALL_DEFINE(304, open_by_handle_at, NULL)
+SYSCALL_DEFINE(305, clock_adjtime, NULL)
+SYSCALL_DEFINE(306, syncfs, NULL)
+SYSCALL_DEFINE(307, sendmmsg, NULL)
+SYSCALL_DEFINE(308, setns, NULL)
+SYSCALL_DEFINE(309, getcpu, NULL)
+SYSCALL_DEFINE(310, process_vm_readv, NULL)
+SYSCALL_DEFINE(311, process_vm_writev, NULL)
+SYSCALL_DEFINE(312, kcmp, NULL)
+SYSCALL_DEFINE(313, finit_module, NULL)
+SYSCALL_DEFINE(314, sched_setattr, NULL)
+SYSCALL_DEFINE(315, sched_getattr, NULL)
+SYSCALL_DEFINE(316, renameat2, NULL)
+SYSCALL_DEFINE(317, seccomp, NULL)
+SYSCALL_DEFINE(318, getrandom, NULL)
+SYSCALL_DEFINE(319, memfd_create, NULL)
+SYSCALL_DEFINE(320, kexec_file_load, NULL)
+SYSCALL_DEFINE(321, bpf, NULL)
+SYSCALL_DEFINE(322, execveat, NULL)
+SYSCALL_DEFINE(323, userfaultfd, NULL)
+SYSCALL_DEFINE(324, membarrier, NULL)
+SYSCALL_DEFINE(325, mlock2, NULL)
+SYSCALL_DEFINE(326, copy_file_range, NULL)
+SYSCALL_DEFINE(327, preadv2, NULL)
+SYSCALL_DEFINE(328, pwritev2, NULL)
+SYSCALL_DEFINE(329, pkey_mprotect, NULL)
+SYSCALL_DEFINE(330, pkey_alloc, NULL)
+SYSCALL_DEFINE(331, pkey_free, NULL)
+SYSCALL_DEFINE(332, statx, NULL)
+SYSCALL_DEFINE(333, io_pgetevents, NULL)
+SYSCALL_DEFINE(334, rseq, NULL)
+SYSCALL_DEFINE(335, uretprobe, NULL)
+SYSCALL_DEFINE(424, pidfd_send_signal, NULL)
+SYSCALL_DEFINE(425, io_uring_setup, NULL)
+SYSCALL_DEFINE(426, io_uring_enter, NULL)
+SYSCALL_DEFINE(427, io_uring_register, NULL)
+SYSCALL_DEFINE(428, open_tree, NULL)
+SYSCALL_DEFINE(429, move_mount, NULL)
+SYSCALL_DEFINE(430, fsopen, NULL)
+SYSCALL_DEFINE(431, fsconfig, NULL)
+SYSCALL_DEFINE(432, fsmount, NULL)
+SYSCALL_DEFINE(433, fspick, NULL)
+SYSCALL_DEFINE(434, pidfd_open, NULL)
+SYSCALL_DEFINE(435, clone3, NULL)
+SYSCALL_DEFINE(436, close_range, NULL)
+SYSCALL_DEFINE(437, openat2, NULL)
+SYSCALL_DEFINE(438, pidfd_getfd, NULL)
+SYSCALL_DEFINE(439, faccessat2, NULL)
+SYSCALL_DEFINE(440, process_madvise, NULL)
+SYSCALL_DEFINE(441, epoll_pwait2, NULL)
+SYSCALL_DEFINE(442, mount_setattr, NULL)
+SYSCALL_DEFINE(443, quotactl_fd, NULL)
+SYSCALL_DEFINE(444, landlock_create_ruleset, NULL)
+SYSCALL_DEFINE(445, landlock_add_rule, NULL)
+SYSCALL_DEFINE(446, landlock_restrict_self, NULL)
+SYSCALL_DEFINE(447, memfd_secret, NULL)
+SYSCALL_DEFINE(448, process_mrelease, NULL)
+SYSCALL_DEFINE(449, futex_waitv, NULL)
+SYSCALL_DEFINE(450, set_mempolicy_home_node, NULL)
+SYSCALL_DEFINE(451, cachestat, NULL)
+SYSCALL_DEFINE(452, fchmodat2, NULL)
+SYSCALL_DEFINE(453, map_shadow_stack, NULL)
+SYSCALL_DEFINE(454, futex_wake, NULL)
+SYSCALL_DEFINE(455, futex_wait, NULL)
+SYSCALL_DEFINE(456, futex_requeue, NULL)
+SYSCALL_DEFINE(457, statmount, NULL)
+SYSCALL_DEFINE(458, listmount, NULL)
+SYSCALL_DEFINE(459, lsm_get_self_attr, NULL)
+SYSCALL_DEFINE(460, lsm_set_self_attr, NULL)
+SYSCALL_DEFINE(461, lsm_list_modules, NULL)
+SYSCALL_DEFINE(462, mseal, NULL)
+SYSCALL_DEFINE(463, setxattrat, NULL)
+SYSCALL_DEFINE(464, getxattrat, NULL)
+SYSCALL_DEFINE(465, listxattrat, NULL)
+SYSCALL_DEFINE(466, removexattrat, NULL)
+SYSCALL_DEFINE(467, open_tree_attr, NULL)
+SYSCALL_DEFINE(468, file_getattr, NULL)
+SYSCALL_DEFINE(469, file_setattr, NULL)
