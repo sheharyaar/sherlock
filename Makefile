@@ -1,35 +1,15 @@
-# Compiler and flags
-CC      := gcc
-CFLAGS  := -Wall -Wextra -g
-LDFLAGS := 
+SUBDIRS := watson 
+BUILD_DIR := build
 
-TARGET  := sherlock
+.PHONY: all $(SUBDIRS) clean
 
-# Debug flag (default off)
-DEBUG ?= 0
-ifeq ($(DEBUG),1)
-	CFLAGS += -DDEBUG=1
-endif
+all: $(SUBDIRS)
 
-# Sources and objects
-SRC  := $(wildcard *.c) \
-		$(wildcard helpers/*.c)
+$(SUBDIRS):
+	$(MAKE) -C $@ BUILD_DIR=$(abspath $(BUILD_DIR))
 
-HEADERS := $(wildcard *.h)
-OBJ  := $(SRC:.c=.o)
-
-
-all: $(TARGET)
-
-# Link and build
-$(TARGET): $(OBJ)
-	$(CC) $(OBJ) -o $@ $(LDFLAGS)
-
-# Compile (each .c -> .o)
-%.o: %.c $(HEADERS)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Clean rule
 clean:
-	rm -f $(OBJ) $(TARGET)
-
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir clean BUILD_DIR=$(abspath $(BUILD_DIR)); \
+	done
+	rm -rf $(BUILD_DIR)

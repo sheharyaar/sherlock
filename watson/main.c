@@ -16,8 +16,8 @@ static tracee_t tracee;
 void print_help(int ret)
 {
 	pr_info_raw("usage:\n");
-	pr_info_raw("./sherlock --pid pid\n");
-	pr_info_raw("./sherlock --exec program arg1 arg2 ...\n");
+	pr_info_raw("./watson --pid pid\n");
+	pr_info_raw("./watson --exec program arg1 arg2 ...\n");
 	exit(ret);
 }
 
