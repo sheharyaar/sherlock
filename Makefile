@@ -1,4 +1,4 @@
-SUBDIRS := watson 
+SUBDIRS := watson irene
 BUILD_DIR := build
 
 .PHONY: all $(SUBDIRS) clean
