@@ -222,10 +222,9 @@ int main(int argc, char *argv[])
 		if (!tracee.execd)
 			goto tracee_continue;
 
-		// print_registers
 		memset(&regs, 0, sizeof(struct user_regs_struct));
 		if (ptrace(PTRACE_GETREGS, tracee.pid, NULL, &regs) == -1) {
-			pr_err("peekuser error: %s", strerror(errno));
+			pr_err("getregs error: %s", strerror(errno));
 			goto err;
 		}
 
