@@ -8,7 +8,7 @@
 # Compiler and flags
 CC      := gcc
 CFLAGS  := -Wall -Wextra -g
-LDFLAGS := 
+LDFLAGS := -lelf
 
 TARGET  := irene
 BUILD_DIR ?= ../build
