@@ -13,10 +13,11 @@ This repository contains source code for the following tracers:
 
 For notes and other information, please open the individual directories, which contain their own `README.md` files.
 
-> Note: At this point only `watson` is fully functional. `irene` and `sherlock` are still under development.
+> Note: At this point only `watson` and `irene` are functional. `sherlock` is still under development.
 
 ## Build
 
+The binary will be created in the `build` directory in the root of the project.
 You can either build the tracers individually or all at once. For building all at once, run:
 ```bash
 make all
@@ -30,3 +31,7 @@ make sherlock
 ```
 
 Or you can also open the individual directories and run `make` there.
+
+To run the programs - `./build/<tracer> --help`
+
+> For PID attachment mode you will need `sudo` privileges.
