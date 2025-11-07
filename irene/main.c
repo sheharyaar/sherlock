@@ -125,6 +125,11 @@ void setup(int argc, char *argv[])
 				// kill the child
 				goto parent_err;
 			}
+
+			// TODO: Add logic here to stop at EXEC syscall for the
+			// child so that you can calculate the base address of
+			// the child using its PID at /proc/PID/maps
+
 			return;
 
 		parent_err:
@@ -137,11 +142,6 @@ void setup(int argc, char *argv[])
 		pr_err("invalid arguments");
 		print_help(1);
 	}
-}
-
-void print_registers(struct user_regs_struct *regs)
-{
-	pr_debug("rip: %llx", regs->rip);
 }
 
 int main(int argc, char *argv[])
@@ -173,13 +173,11 @@ int main(int argc, char *argv[])
 			goto tracee_continue;
 		}
 
-		// print_registers
 		if (ptrace(PTRACE_GETREGS, tracee.pid, NULL, &regs) == -1) {
 			pr_err("peekuser error: %s", strerror(errno));
 			goto err;
 		}
 
-		// print_registers(&regs);
 		instr = ptrace(PTRACE_PEEKTEXT, tracee.pid, regs.rip, NULL);
 		if (instr == -1) {
 			pr_err("peektext error: %s", strerror(errno));
@@ -187,7 +185,7 @@ int main(int argc, char *argv[])
 		}
 
 		if ((instr & 0xFF) == 0xe8) {
-			handle_calls(regs.rip, instr);
+			call_to_va(regs.rip, instr);
 		}
 
 	tracee_continue:

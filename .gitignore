@@ -2,3 +2,4 @@ bin/**
 .vscode/
 *.o
 build/
+irene/test/hello

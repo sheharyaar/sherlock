@@ -35,5 +35,6 @@ typedef struct TRACEE {
 
 #endif
 
-void handle_calls(long long int rip, long int instr);
 void print_libs(char *file);
+void set_va_base(unsigned long long addr);
+unsigned long long call_to_va(unsigned long long rip, long instr);
