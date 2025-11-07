@@ -44,8 +44,16 @@ static void handle_plt_call(
 
 int main(int argc, char *argv[])
 {
-	tracee_setup(argc, argv, &tracee);
-	elf_plt_init(&tracee);
+	if (tracee_setup(argc, argv, &tracee) < 0) {
+		pr_err("tracee setup failed");
+		exit(1);
+	}
+
+	if (elf_plt_init(&tracee) < 0) {
+		pr_err("elf_plt_init failed");
+		ptrace(PTRACE_DETACH, tracee.pid, NULL, NULL);
+		exit(1);
+	}
 
 	int wstatus = 0;
 	// if using PID mode then start directly with singlestep

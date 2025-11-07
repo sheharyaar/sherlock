@@ -33,7 +33,7 @@ typedef struct TRACEE {
 #define CALL_TO_VA(rip, instr)                                                 \
 	((rip) + 0x05 + (int)(((instr) & 0xffffffffffULL) >> 8))
 
-void tracee_setup(int argc, char *argv[], tracee_t *tracee);
+int tracee_setup(int argc, char *argv[], tracee_t *tracee);
 int elf_plt_init(tracee_t *tracee);
 int elf_mem_va_base(tracee_t *tracee);
 char *elf_get_plt_name(tracee_t *tracee, unsigned long long addr);

@@ -21,8 +21,6 @@
 static void __attribute((noreturn)) exit_help(int ret)
 {
 	pr_info_raw("usage:\n");
-	// TODO:
-	// pr_info_raw("./irene --pid pid\n");
 	pr_info_raw("./irene --exec program arg1 arg2 ...\n");
 	exit(ret);
 }
@@ -44,11 +42,14 @@ static int attach_and_start(tracee_t *tracee, int options)
 	}
 	pr_debug("waitpid attach");
 
-	if (ptrace(PTRACE_SETOPTIONS, tracee->pid, NULL, options) == -1) {
-		pr_err("ptrace setopts failed: %s", strerror(errno));
-		goto err;
+	if (options != 0) {
+		if (ptrace(PTRACE_SETOPTIONS, tracee->pid, NULL, options) ==
+		    -1) {
+			pr_err("ptrace setopts failed: %s", strerror(errno));
+			goto err;
+		}
+		pr_debug("ptrace setoptions");
 	}
-	pr_debug("ptrace setoptions");
 
 	// start tracing the tracee at syscalls
 	if (ptrace(PTRACE_SYSCALL, tracee->pid, NULL, 0) < 0) {
@@ -64,24 +65,13 @@ err:
 }
 
 // The setup routine, initialises the tracee var and fork-execs if required
-void tracee_setup(int argc, char *argv[], tracee_t *tracee)
+int tracee_setup(int argc, char *argv[], tracee_t *tracee)
 {
 	if (argc < 3)
 		exit_help(1); // noreturn
 
 	if (strncmp(argv[1], "--help", strlen("--help")) == 0)
 		exit_help(0); // noreturn
-
-	strncpy(tracee->file_name, argv[2], 256);
-	tracee->file_name[255] = '\0';
-
-	if (strncmp(argv[1], "--pid", strlen("--pid")) == 0) {
-		tracee->pid = atoi(argv[2]);
-
-		// TODO: Complete this with VA Base, etc.
-		pr_info("tracing PID: %d", tracee->pid);
-		return;
-	}
 
 	if (strncmp(argv[1], "--exec", strlen("--exec")) == 0) {
 		// setup pipe for communication
@@ -119,11 +109,11 @@ void tracee_setup(int argc, char *argv[], tracee_t *tracee)
 		}
 
 		tracee->pid = ret;
+		strncpy(tracee->file_name, argv[2], 256);
+		tracee->file_name[255] = '\0';
+
 		close(pipefd[0]);
 
-		// TODO: Attach as SYSCALL at first, to stop when the child
-		// execs so that we can fetch its address mappings and get the
-		// base Virtual Address.
 		if (attach_and_start(
 			tracee, PTRACE_O_EXITKILL | PTRACE_O_TRACEEXEC) == -1) {
 			pr_err("attach failed for exec child");
@@ -136,14 +126,12 @@ void tracee_setup(int argc, char *argv[], tracee_t *tracee)
 			goto parent_err;
 		}
 
-		// TODO: Add logic here to stop at EXEC syscall for the
-		// child so that you can calculate the base address of
-		// the child using its PID at /proc/PID/maps
-
-		return;
+		return 0;
 
 	parent_err:
 		kill(tracee->pid, SIGKILL);
 		exit(1);
 	}
+
+	return -1;
 }

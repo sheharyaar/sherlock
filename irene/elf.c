@@ -62,21 +62,22 @@ int elf_mem_va_base(tracee_t *tracee)
 {
 	// read the /proc/pid/maps file and get the PID
 	char *pid_maps_filename = calloc(256, sizeof(char));
+	FILE *pid_maps_f = NULL;
+
 	if (snprintf(pid_maps_filename, 255, PID_MAP_STR, tracee->pid) < 0) {
 		pr_err("snprint failed: %s", strerror(errno));
 		return -1;
 	}
 
-	FILE *pid_maps_f = NULL;
 	if ((pid_maps_f = fopen(pid_maps_filename, "r")) == NULL) {
 		pr_err("opening pid map file failed: %s", strerror(errno));
-		return -1;
+		goto out;
 	}
 
 	unsigned long long start = 0, end = 0;
 	if (fscanf(pid_maps_f, "%64llx-%64llx ", &start, &end) == EOF) {
 		pr_err("error in fscanf: %s", strerror(ferror(pid_maps_f)));
-		return -1;
+		goto file_out;
 	}
 
 	tracee->va_base = start;
@@ -85,6 +86,11 @@ int elf_mem_va_base(tracee_t *tracee)
 	pr_debug("start address=%#llx", tracee->va_base);
 	pr_debug("absolute plt_start=%#llx plt_end=%#llx", tracee->plt_start,
 	    tracee->plt_end);
+
+file_out:
+	fclose(pid_maps_f);
+out:
+	free(pid_maps_filename);
 	return 0;
 }
 
