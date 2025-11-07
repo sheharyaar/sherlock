@@ -29,13 +29,27 @@
 
 static tracee_t tracee;
 
+static void handle_plt_call(
+    tracee_t *tracee, struct user_regs_struct *regs, unsigned long long addr)
+{
+	char *sym_name = elf_get_plt_name(tracee, addr);
+	if (sym_name == NULL) {
+		pr_err("elf_get_plt_name failed");
+		return;
+	}
+
+	pr_info_raw("%s(%#llx , %#llx, %#llx, %#llx)\n", sym_name, regs->rdi,
+	    regs->rsi, regs->rdx, regs->rcx);
+}
+
 int main(int argc, char *argv[])
 {
-	print_libs(argv[2]);
-	setup(argc, argv, &tracee);
+	tracee_setup(argc, argv, &tracee);
+	elf_plt_init(&tracee);
 
 	int wstatus = 0;
-	int trace_type = PTRACE_SYSCALL;
+	// if using PID mode then start directly with singlestep
+	int trace_type = tracee.execd ? PTRACE_SINGLESTEP : PTRACE_SYSCALL;
 	long instr = 0;
 	struct user_regs_struct regs;
 
@@ -50,7 +64,7 @@ int main(int argc, char *argv[])
 		// WIFSTOPPED(status) true. See manpage ptrace(2).
 		if (!WIFSTOPPED(wstatus)) {
 			if (WIFEXITED(wstatus)) {
-				pr_err("child exited, exiting tracer");
+				pr_info("child exited, exiting tracer");
 				return 1;
 			}
 			pr_warn("tracee stopped, not by ptrace\n");
@@ -66,7 +80,7 @@ int main(int argc, char *argv[])
 		if (wstatus >> 8 == (SIGTRAP | (PTRACE_EVENT_EXEC << 8))) {
 			pr_debug("child execed");
 			// fetch the memory map base
-			if (get_mem_va_base(&tracee) < 0) {
+			if (elf_mem_va_base(&tracee) < 0) {
 				pr_err("could not get tracee memory VA "
 				       "base "
 				       "address, trace failed");
@@ -93,9 +107,11 @@ int main(int argc, char *argv[])
 		// Check if the instruction is 'call'. e8 denotes to a near call
 		// with 32 bit address Check AMD64 manuals for this
 		if ((instr & 0xFF) == 0xe8) {
-			pr_debug("Called VA: %#llx",
-			    // convert the call address to Virtual Address
-			    CALL_TO_VA(regs.rip, instr, tracee.va_base));
+			unsigned long long addr = CALL_TO_VA(regs.rip, instr);
+			// If the instruction falls within the PLT address
+			if (addr > tracee.plt_start && addr < tracee.plt_end) {
+				handle_plt_call(&tracee, &regs, addr);
+			}
 		}
 
 	tracee_continue:

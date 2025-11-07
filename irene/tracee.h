@@ -19,16 +19,23 @@
 typedef enum state { UNATTACHED, ENTRY, EXIT } state_t;
 
 typedef struct TRACEE {
+	// The plt start and end address is base + plt relative addr, like,
+	// 0x555f23432 + 0x1020
+	unsigned long long plt_start;
+	unsigned long long plt_end;
+	unsigned long long plt_entsize;
 	unsigned long long va_base;
+	char file_name[256];
 	pid_t pid;
 	bool execd;
 } tracee_t;
 
-#define CALL_TO_VA(rip, instr, base)                                           \
-	(((rip) + 0x05 + (int)(((instr) & 0xffffffffffULL) >> 8)) - base)
+#define CALL_TO_VA(rip, instr)                                                 \
+	((rip) + 0x05 + (int)(((instr) & 0xffffffffffULL) >> 8))
 
-void setup(int argc, char *argv[], tracee_t *tracee);
-void print_libs(char *file);
-int get_mem_va_base(tracee_t *tracee);
+void tracee_setup(int argc, char *argv[], tracee_t *tracee);
+int elf_plt_init(tracee_t *tracee);
+int elf_mem_va_base(tracee_t *tracee);
+char *elf_get_plt_name(tracee_t *tracee, unsigned long long addr);
 
 #endif

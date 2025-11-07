@@ -64,26 +64,26 @@ err:
 }
 
 // The setup routine, initialises the tracee var and fork-execs if required
-void setup(int argc, char *argv[], tracee_t *tracee)
+void tracee_setup(int argc, char *argv[], tracee_t *tracee)
 {
-	if (argc < 2)
+	if (argc < 3)
 		exit_help(1); // noreturn
 
 	if (strncmp(argv[1], "--help", strlen("--help")) == 0)
 		exit_help(0); // noreturn
 
+	strncpy(tracee->file_name, argv[2], 256);
+	tracee->file_name[255] = '\0';
+
 	if (strncmp(argv[1], "--pid", strlen("--pid")) == 0) {
 		tracee->pid = atoi(argv[2]);
+
 		// TODO: Complete this with VA Base, etc.
 		pr_info("tracing PID: %d", tracee->pid);
 		return;
 	}
 
 	if (strncmp(argv[1], "--exec", strlen("--exec")) == 0) {
-		if (argc < 3) {
-			exit_help(1); // noreturn
-		}
-
 		// setup pipe for communication
 		int pipefd[2];
 		int flag;

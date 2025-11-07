@@ -9,19 +9,56 @@
 
 #include "log.h"
 #include "tracee.h"
-#include <libelf.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <libelf.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/param.h>
 
 #define PID_MAP_STR "/proc/%d/maps"
+#define MAX_PLT_ENTRIES 256
 
-// char *get_symbol_name(Elf_Scn *sym_scn, Elf64_Shdr *sym_hdr, int index) {}
+static char *sym_name[MAX_PLT_ENTRIES] = { 0 };
+
+static char *get_symbol_name(
+    Elf *elf, Elf_Scn *dynsym_scn, size_t dynstr_indx, int index)
+{
+	Elf64_Sym *sym = NULL;
+	Elf_Data *data = elf_getdata(dynsym_scn, NULL);
+	if (data == NULL) {
+		pr_err("error in elf_getdata: %s", elf_errmsg(elf_errno()));
+		return NULL;
+	}
+
+	// for each entry of .dynsym
+	sym = data->d_buf;
+	return elf_strptr(elf, dynstr_indx, sym[index].st_name);
+}
+
+char *elf_get_plt_name(tracee_t *tracee, unsigned long long addr)
+{
+	if ((addr % tracee->plt_entsize) != 0) {
+		pr_err("call addr(%#llx) not a multiple of plt_entsize(%#llx)",
+		    addr, tracee->plt_entsize);
+		return NULL;
+	}
+
+	int index = (unsigned long long)(addr - tracee->plt_start) /
+		tracee->plt_entsize -
+	    1;
+
+	if (index >= MAX_PLT_ENTRIES) {
+		pr_err("index(%d) exceeds MAX_PLT_ENTRIES(%d)", index,
+		    MAX_PLT_ENTRIES);
+	}
+
+	return sym_name[index];
+}
 
 // Sets the base virtual address of the tracee using proc/<pid>/maps file.
 // Returns -1 on failure.
-int get_mem_va_base(tracee_t *tracee)
+int elf_mem_va_base(tracee_t *tracee)
 {
 	// read the /proc/pid/maps file and get the PID
 	char *pid_maps_filename = calloc(256, sizeof(char));
@@ -42,18 +79,22 @@ int get_mem_va_base(tracee_t *tracee)
 		return -1;
 	}
 
-	pr_debug("start address=%llx", start);
 	tracee->va_base = start;
+	tracee->plt_start += tracee->va_base;
+	tracee->plt_end += tracee->va_base;
+	pr_debug("start address=%#llx", tracee->va_base);
+	pr_debug("absolute plt_start=%#llx plt_end=%#llx", tracee->plt_start,
+	    tracee->plt_end);
 	return 0;
 }
 
-void print_libs(char *file)
+int elf_plt_init(tracee_t *tracee)
 {
-	pr_info("opening and reading file: %s", file);
-	int fd = open(file, O_RDONLY);
+	pr_debug("opening and reading file: %s", tracee->file_name);
+	int fd = open(tracee->file_name, O_RDONLY);
 	if (fd == -1) {
 		pr_err("error in open: %s", strerror(errno));
-		return;
+		goto err;
 	}
 
 	/* this needs to be called before any elf calls. See freebsd man
@@ -121,6 +162,17 @@ void print_libs(char *file)
 		if (strncmp(".dynstr", name, 7) == 0) {
 			dynstr_indx = elf_ndxscn(scn);
 		}
+
+		if (strncmp(".plt", name, 5) == 0) {
+			// lets keep the VA for now, then we will add base later
+			tracee->plt_start = hdr->sh_addr;
+			tracee->plt_end = hdr->sh_addr + hdr->sh_size;
+			tracee->plt_entsize = hdr->sh_entsize;
+			pr_debug("relative plt_start=%#llx plt_end=%#llx "
+				 "plt_entsize=%#llx",
+			    tracee->plt_start, tracee->plt_end,
+			    tracee->plt_entsize);
+		}
 	}
 
 	if (rela_plt_scn == NULL || rela_plt_hdr == NULL ||
@@ -129,9 +181,6 @@ void print_libs(char *file)
 		       "in ELF");
 		goto elf_out;
 	}
-
-	int n_plts = rela_plt_hdr->sh_size / rela_plt_hdr->sh_entsize;
-	pr_info("Number of .rela.plt entries: %d", n_plts);
 
 	// .rela.plt section entries
 	Elf64_Rela *rela = NULL;
@@ -143,31 +192,29 @@ void print_libs(char *file)
 
 	// for each entry of .rela.plt
 	rela = data->d_buf;
-	for (long unsigned i = 0; i < data->d_size / rela_plt_hdr->sh_entsize;
+	char *sym_str = NULL;
+	for (long unsigned i = 0;
+	    i < MIN(data->d_size / rela_plt_hdr->sh_entsize, MAX_PLT_ENTRIES);
 	    i++) {
-		pr_info("Rela [OFFSET]=%#lx [INFO SYMBOL]=%#lx [INFO "
-			"TYPE]=%ld [ADDEND]=%ld",
-		    rela[i].r_offset, ELF64_R_SYM(rela[i].r_info),
-		    ELF64_R_TYPE(rela[i].r_info), rela[i].r_addend);
+		sym_str = get_symbol_name(
+		    elf, dynsym_scn, dynstr_indx, ELF64_R_SYM(rela[i].r_info));
+
+		if (sym_str == NULL) {
+			pr_err("error in reading PLT symbol value, exiting");
+			goto elf_out;
+		}
+
+		pr_debug("[SYMBOL]=%s", sym_str);
+		sym_name[i] = sym_str;
 	}
 
-	Elf64_Sym *sym = NULL;
-	data = elf_getdata(dynsym_scn, NULL);
-	if (data == NULL) {
-		pr_err("error in elf_getdata: %s", elf_errmsg(elf_errno()));
-		goto elf_out;
-	}
-
-	// for each entry of .dynsym
-	sym = data->d_buf;
-	for (long unsigned i = 0; i < data->d_size / dynsym_hdr->sh_entsize;
-	    i++) {
-		pr_info("symbol [index]=%lu, [name]=%s", i,
-		    elf_strptr(elf, dynstr_indx, sym[i].st_name));
-	}
+	// cant use elf_end here as the string pointers are in use.
+	return 0;
 
 elf_out:
 	elf_end(elf);
 out:
 	close(fd);
+err:
+	return -1;
 }
