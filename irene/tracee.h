@@ -1,5 +1,5 @@
 /*
- * Watson - System call tracer
+ * Irene - System call tracer
  * Part of the Sherlock project
  *
  * Copyright (c) 2025 Mohammad Shehar Yaar Tausif
