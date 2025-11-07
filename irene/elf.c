@@ -1,11 +1,51 @@
+/*
+ * Irene - Library call tracer
+ * Part of the Sherlock project
+ *
+ * Copyright (c) 2025 Mohammad Shehar Yaar Tausif
+ *
+ * This file is licensed under the MIT License.
+ */
+
 #include "log.h"
-#include "tracee_defs.h"
+#include "tracee.h"
 #include <libelf.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
+
+#define PID_MAP_STR "/proc/%d/maps"
 
 // char *get_symbol_name(Elf_Scn *sym_scn, Elf64_Shdr *sym_hdr, int index) {}
+
+// Sets the base virtual address of the tracee using proc/<pid>/maps file.
+// Returns -1 on failure.
+int get_mem_va_base(tracee_t *tracee)
+{
+	// read the /proc/pid/maps file and get the PID
+	char *pid_maps_filename = calloc(256, sizeof(char));
+	if (snprintf(pid_maps_filename, 255, PID_MAP_STR, tracee->pid) < 0) {
+		pr_err("snprint failed: %s", strerror(errno));
+		return -1;
+	}
+
+	FILE *pid_maps_f = NULL;
+	if ((pid_maps_f = fopen(pid_maps_filename, "r")) == NULL) {
+		pr_err("opening pid map file failed: %s", strerror(errno));
+		return -1;
+	}
+
+	unsigned long long start = 0, end = 0;
+	if (fscanf(pid_maps_f, "%64llx-%64llx ", &start, &end) == EOF) {
+		pr_err("error in fscanf: %s", strerror(ferror(pid_maps_f)));
+		return -1;
+	}
+
+	pr_debug("start address=%llx", start);
+	tracee->va_base = start;
+	return 0;
+}
 
 void print_libs(char *file)
 {
@@ -103,7 +143,8 @@ void print_libs(char *file)
 
 	// for each entry of .rela.plt
 	rela = data->d_buf;
-	for (int i = 0; i < data->d_size / rela_plt_hdr->sh_entsize; i++) {
+	for (long unsigned i = 0; i < data->d_size / rela_plt_hdr->sh_entsize;
+	    i++) {
 		pr_info("Rela [OFFSET]=%#lx [INFO SYMBOL]=%#lx [INFO "
 			"TYPE]=%ld [ADDEND]=%ld",
 		    rela[i].r_offset, ELF64_R_SYM(rela[i].r_info),
@@ -119,19 +160,11 @@ void print_libs(char *file)
 
 	// for each entry of .dynsym
 	sym = data->d_buf;
-	for (int i = 0; i < data->d_size / dynsym_hdr->sh_entsize; i++) {
-		pr_info("symbol [index]=%d, [name]=%s", i,
+	for (long unsigned i = 0; i < data->d_size / dynsym_hdr->sh_entsize;
+	    i++) {
+		pr_info("symbol [index]=%lu, [name]=%s", i,
 		    elf_strptr(elf, dynstr_indx, sym[i].st_name));
 	}
-
-	/* TODO:
-	- Now that you have got the symbol names of the functions you care
-	about, now get the PLT entry for those, so that you can then related
-	them
-	- Objdump show:
-	-    1030: ff 25 ca 2f 00 00 jmp *0x2fca(%rip) #4000 <puts@GLIBC_2.2.5>
-	- This 4000 is present in .rela.plt section
-	 */
 
 elf_out:
 	elf_end(elf);
