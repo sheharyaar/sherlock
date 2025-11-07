@@ -19,15 +19,14 @@
 typedef enum state { UNATTACHED, ENTRY, EXIT } state_t;
 
 typedef struct TRACEE {
+	unsigned long long base;
 	pid_t pid;
-	int signal;
-	state_t state;
 	bool execd;
 } tracee_t;
 
-#define tracee_continue_syscall()                                              \
+#define tracee_continue_trace(mode)                                            \
 	do {                                                                   \
-		if (ptrace(PTRACE_SINGLESTEP, tracee.pid, NULL, 0) == -1) {    \
+		if (ptrace(mode, tracee.pid, NULL, 0) == -1) {                 \
 			pr_err("ptrace cont err: %s", strerror(errno));        \
 			goto err;                                              \
 		}                                                              \
@@ -35,6 +34,7 @@ typedef struct TRACEE {
 
 #endif
 
+#define CALL_TO_VA(rip, instr, base)                                           \
+	(((rip) + 0x05 + (int)(((instr) & 0xffffffffffULL) >> 8)) - base)
+
 void print_libs(char *file);
-void set_va_base(unsigned long long addr);
-unsigned long long call_to_va(unsigned long long rip, long instr);

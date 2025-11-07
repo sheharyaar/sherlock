@@ -72,7 +72,6 @@ void setup(int argc, char *argv[])
 
 	if (strncmp(argv[1], "--pid", strlen("--pid")) == 0) {
 		tracee.pid = atoi(argv[2]);
-		tracee.state = UNATTACHED;
 		pr_info("tracing PID: %d", tracee.pid);
 
 	} else if (strncmp(argv[1], "--exec", strlen("--exec")) == 0) {
@@ -160,7 +159,6 @@ int main(int argc, char *argv[])
 			pr_err("waitpid err: %s", strerror(errno));
 			goto err;
 		}
-		// pr_debug("waitpid syscall");
 
 		// Ptrace-stopped tracees are reported as returns with
 		// WIFSTOPPED(status) true. See manpage ptrace(2).
@@ -185,12 +183,13 @@ int main(int argc, char *argv[])
 		}
 
 		if ((instr & 0xFF) == 0xe8) {
-			call_to_va(regs.rip, instr);
+			pr_debug("Called VA: %#llx",
+			    CALL_TO_VA(regs.rip, instr, 0x0UL));
 		}
 
 	tracee_continue:
 		if (!terminate)
-			tracee_continue_syscall();
+			tracee_continue_trace(PTRACE_SINGLESTEP);
 	}
 
 	return 0;

@@ -5,19 +5,6 @@
 #include <errno.h>
 #include <string.h>
 
-static unsigned long long va_base = 0;
-
-void set_va_base(unsigned long long addr) { va_base = addr; }
-
-unsigned long long call_to_va(unsigned long long rip, long instr)
-{
-	// convert the instruction to the address format 32-bit sign extended
-	// 0x05 is added to calculatd the next instr address
-	unsigned long long dest =
-	    rip + 0x05 + (int)((instr & 0xffffffffff) >> 8);
-	return dest - va_base;
-}
-
 // char *get_symbol_name(Elf_Scn *sym_scn, Elf64_Shdr *sym_hdr, int index) {}
 
 void print_libs(char *file)
