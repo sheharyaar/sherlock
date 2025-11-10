@@ -5,7 +5,7 @@
 #
 # This file is licensed under the MIT License.
 
-SUBDIRS := watson irene
+SUBDIRS := watson irene sherlock
 BUILD_DIR := build
 
 .PHONY: all $(SUBDIRS) clean
