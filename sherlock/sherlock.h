@@ -10,19 +10,22 @@
 #ifndef _SHERLOCK_H
 #define _SHERLOCK_H
 
+#include "log.h"
 #include <unistd.h>
 
-#define MAX_STR_LEN 256
+#define SHERLOCK_MAX_STRLEN 256
 
 typedef struct BREAKPOINT {
 	unsigned long long addr;
-
 } breakpoint_t;
 
 typedef struct TRACEE {
 	pid_t pid;
 	breakpoint_t *breakpoints;
-	char name[MAX_STR_LEN];
+	char name[SHERLOCK_MAX_STRLEN];
 } tracee_t;
+
+int tracee_setup_pid(tracee_t *tracee, int pid);
+int tracee_setup_exec(tracee_t *tracee, char *argv[]);
 
 #endif

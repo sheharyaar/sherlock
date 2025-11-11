@@ -37,7 +37,7 @@ $(shell mkdir -p $(dir $(OBJ)))
 
 .PHONY: all clean
 
-all: $(BIN) $(TEST_BIN)
+all: $(BIN)
 
 # Link (binary goes to build/)
 $(BIN): $(OBJ)
