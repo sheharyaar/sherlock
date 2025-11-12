@@ -8,7 +8,7 @@
 # Compiler and flags
 CC      := gcc
 CFLAGS  := -Wall -Wextra -g
-LDFLAGS := -lm
+LDFLAGS := -lm -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -lncursesw
 
 TARGET  := sherlock
 BUILD_DIR ?= ../build

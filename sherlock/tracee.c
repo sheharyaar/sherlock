@@ -15,6 +15,7 @@
 #include <string.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #define PROC_CMDLINE "/proc/%d/cmdline"
 
@@ -100,7 +101,7 @@ int tracee_setup_pid(tracee_t *tracee, int pid)
 	// get the cmdline name of the process
 	if (get_pid_cmdline(tracee, pid) == -1) {
 		pr_err("error in get_pid_cmdline");
-		goto err;
+		return -1;
 	}
 	pr_debug("pid cmdline: %s", tracee->name);
 
@@ -108,16 +109,11 @@ int tracee_setup_pid(tracee_t *tracee, int pid)
 	// state, since the program is already running, unlike the exec case
 	if (attach_and_stop(tracee, false) == -1) {
 		pr_err("attaach_and_start failed");
-		goto err;
+		return -1;
 	}
+
 	tracee->pid = pid;
 	return 0;
-
-err:
-	// cleanup
-	memset(tracee->name, 0, SHERLOCK_MAX_STRLEN);
-	tracee->pid = 0;
-	return -1;
 }
 
 // Execs the program andd attaches the deubgger to it. Sets the fields of the
@@ -131,20 +127,60 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[])
 
 	// exec the program, perform IPC for communicating when to exec
 	// and fetching the
+	int pipefd[2];
+	int flag;
 	pid_t cpid;
 
-	// attach the program
-	if (attach_and_stop(tracee, true) == -1) {
-		pr_err("attaach_and_start failed");
-		goto err;
+	if (pipe(pipefd) == -1) {
+		pr_err("pipe failed: %s", strerror(errno));
+		return -1;
+	}
+
+	cpid = fork();
+	if (cpid == -1) {
+		pr_err("fork failed: %s", strerror(errno));
+		return -1;
+	}
+
+	// child's block of code
+	if (cpid == 0) {
+		// close the write end of pipe
+		close(pipefd[1]);
+
+		// wait for parent to setup the tracer, etc.
+		if (read(pipefd[0], &flag, sizeof(int)) == -1) {
+			pr_err("error in child read: %s", strerror(errno));
+			_exit(1);
+		}
+
+		// now exec into the program
+		if (execvp(argv[0], &argv[0]) == -1) {
+			pr_err("error in child exec: %s", strerror(errno));
+			_exit(1);
+		}
 	}
 
 	tracee->pid = cpid;
 	strncpy(tracee->name, argv[0], SHERLOCK_MAX_STRLEN);
 	tracee->name[SHERLOCK_MAX_STRLEN - 1] = '\0';
+
+	// close read end of the pipe for parent
+	close(pipefd[0]);
+
+	if (attach_and_stop(tracee, true) == -1) {
+		pr_err("attach_and_stop failed");
+		goto parent_err;
+	}
+
+	// signal the child to exec
+	if (write(pipefd[1], &flag, sizeof(int)) == -1) {
+		pr_err("error in parent write: %s", strerror(errno));
+		goto parent_err;
+	}
+
 	return 0;
 
-err:
-	memset(tracee->name, 0, SHERLOCK_MAX_STRLEN);
+parent_err:
+	kill(cpid, SIGKILL);
 	return -1;
 }
