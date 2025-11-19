@@ -7,15 +7,16 @@
  * This file is licensed under the MIT License.
  */
 
-#include "log.h"
 #define _GNU_SOURCE
+#include "log.h"
 #include "sherlock.h"
+#include <assert.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -31,7 +32,10 @@ static tracee_t global_tracee = {
 	.breakpoints = NULL,
 	.va_base = 0,
 	.name[0] = '\0',
+	.state = -1,
 };
+
+static pid_t sherlock_pid = 0;
 
 void __attribute__((noreturn)) print_help_exit(int status)
 {
@@ -43,8 +47,20 @@ void __attribute__((noreturn)) print_help_exit(int status)
 	exit(status);
 }
 
+void signal_handler(int signal)
+{
+	if (signal == SIGINT) {
+		if (global_tracee.pid != 0) {
+			kill(global_tracee.pid, SIGINT);
+		} else {
+			exit(1);
+		}
+	} else {
+		exit(0);
+	}
+}
+
 // Sets up tracee and brings it to a stopped state.
-// TODO: exec tracee notes.
 // Returns -1 on failure.
 int setup(int argc, char *argv[], tracee_t *tracee)
 {
@@ -62,6 +78,7 @@ int setup(int argc, char *argv[], tracee_t *tracee)
 			return -1;
 		}
 
+		tracee->pid = pid;
 		return tracee_setup_pid(tracee, pid);
 	}
 
@@ -93,6 +110,7 @@ int setup(int argc, char *argv[], tracee_t *tracee)
 			}
 		}
 
+		tracee->state = TRACEE_INIT;
 		return 0;
 	err:
 		kill(tracee->pid, SIGKILL);
@@ -103,6 +121,8 @@ int setup(int argc, char *argv[], tracee_t *tracee)
 	print_help_exit(1);
 }
 
+// TODO: Add signal handler to send SIGINT to tracee instead of debugger
+
 int main(int argc, char *argv[])
 {
 	if (setup(argc, argv, &global_tracee) == -1) {
@@ -110,14 +130,75 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	bool terminate = false;
+	sherlock_pid = getpid();
 
-	// at this point the tracee is spawned (if --exec), ptrace
-	// attached and stopped.
+	if (signal(SIGINT, signal_handler) == SIG_ERR) {
+		pr_err("error in signal(SIGINT): %s", strerror(errno));
+		return 1;
+	}
+
+	if (signal(SIGTERM, signal_handler) == SIG_ERR) {
+		pr_err("error in signal(SIGTERM): %s", strerror(errno));
+		return 1;
+	}
+
+	// TODO: Fix pgid and tty ownership
+	// if (setpgid(0, 0) == -1) {
+	// 	pr_err("error in parent setpgid: %s", strerror(errno));
+	// 	return 1;
+	// }
+
+#if DEBUG
+	assert(global_tracee.state == TRACEE_INIT ||
+	    global_tracee.state == TRACEE_STOPPED);
+#endif
+
 	char input[SHERLOCK_MAX_STRLEN];
-	while (!terminate) {
+	tracee_state_t ret;
+
+	/*
+	Each action/input requires the tracee to be in stopped state. Initially,
+	either through --exec or through --pid, the tracee is in stopped state.
+
+	So the actions can be divided into two types: one that leave the tracee
+	in stopped state and the others that restart the tracee.
+
+	Actions that restart the tracee: run, step, next.
+	Actions that leave it in the stopped state: all actions other than the
+	above.
+	 */
+	int wstatus = 0;
+	while (1) {
 		dbg_prompt(input, SHERLOCK_MAX_STRLEN);
-		input_parse(input);
+		ret = action_parse_input(&global_tracee, input);
+		if (ret == TRACEE_ERR) {
+			pr_err("critical error, killing debugger");
+			return 1;
+		}
+
+		if (ret == TRACEE_KILLED) {
+			pr_info("the tracee has been killed, exiting debugger");
+			return 0;
+		}
+
+#if DEBUG
+		assert(global_tracee.state == TRACEE_RUNNING ||
+		    global_tracee.state == TRACEE_STOPPED);
+#endif
+
+		if (global_tracee.state == TRACEE_RUNNING) {
+			if (waitpid(global_tracee.pid, &wstatus, 0) < 0) {
+				pr_err("waitpid err: %s", strerror(errno));
+				return 1;
+			}
+
+			if (WIFSTOPPED(wstatus)) {
+				pr_info("tracee received signal: %s",
+				    strsignal(WSTOPSIG(wstatus)));
+			}
+
+			global_tracee.state = TRACEE_STOPPED;
+		}
 	}
 
 	return 0;

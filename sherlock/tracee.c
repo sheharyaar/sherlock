@@ -108,11 +108,11 @@ int tracee_setup_pid(tracee_t *tracee, int pid)
 	// attach to the program, the tracee should be left in the stopped
 	// state, since the program is already running, unlike the exec case
 	if (attach_and_stop(tracee, false) == -1) {
-		pr_err("attaach_and_start failed");
+		pr_err("attach_and_start failed");
 		return -1;
 	}
 
-	tracee->pid = pid;
+	tracee->state = TRACEE_STOPPED;
 	return 0;
 }
 
@@ -152,6 +152,12 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[])
 			pr_err("error in child read: %s", strerror(errno));
 			_exit(1);
 		}
+
+		// TODO: Fix pgid and tty ownership
+		// if (setpgid(0, 0) == -1) {
+		// 	pr_err("error in child setpgid: %s", strerror(errno));
+		// 	_exit(1);
+		// }
 
 		// now exec into the program
 		if (execvp(argv[0], &argv[0]) == -1) {

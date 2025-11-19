@@ -7,13 +7,12 @@
  * This file is licensed under the MIT License.
  */
 
-#include "sherlock.h"
-#include <string.h>
+#include "../action.h"
+#include <signal.h>
 
-action_t *input_parse(char *input)
+REG_ACTION(kill)
 {
-	if (strncmp("break", input, 5) == 0) {
-	}
-err:
-	return NULL;
+	pr_debug("action: kill");
+	kill(tracee->pid, SIGKILL);
+	RET_ACTION(tracee, TRACEE_KILLED);
 }

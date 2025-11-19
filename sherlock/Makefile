@@ -8,7 +8,7 @@
 # Compiler and flags
 CC      := gcc
 CFLAGS  := -Wall -Wextra -g
-LDFLAGS := -lm -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -lncursesw
+LDFLAGS := -lm
 
 TARGET  := sherlock
 BUILD_DIR ?= ../build
@@ -28,7 +28,7 @@ endif
 
 # Sources and objects
 SRC  := $(wildcard *.c) \
-        $(wildcard helpers/*.c)
+        $(wildcard actions/*.c)
 HEADERS := $(wildcard *.h)
 OBJ  := $(SRC:.c=.o)
 

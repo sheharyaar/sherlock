@@ -11,10 +11,19 @@
 #define _SHERLOCK_H
 
 #include "log.h"
-#include "action.h"
+#include <sys/ptrace.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #define SHERLOCK_MAX_STRLEN 256
+
+typedef enum {
+	TRACEE_INIT,
+	TRACEE_RUNNING,
+	TRACEE_STOPPED,
+	TRACEE_KILLED,
+	TRACEE_ERR
+} tracee_state_t;
 
 typedef struct BREAKPOINT {
 	unsigned long long addr;
@@ -25,6 +34,7 @@ typedef struct TRACEE {
 	breakpoint_t *breakpoints;
 	unsigned long long va_base;
 	char name[SHERLOCK_MAX_STRLEN];
+	tracee_state_t state;
 } tracee_t;
 
 int tracee_setup_pid(tracee_t *tracee, int pid);
@@ -32,6 +42,6 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[]);
 
 int elf_mem_va_base(tracee_t *tracee);
 
-action_t *input_parse(char *input);
+tracee_state_t action_parse_input(tracee_t *t, char *input);
 
 #endif
