@@ -69,5 +69,6 @@ typedef struct TRACEE_ACTION {
 REG_ACTION(run);
 REG_ACTION(kill);
 REG_ACTION(step);
+REG_ACTION(print);
 
 #endif
