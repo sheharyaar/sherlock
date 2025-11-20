@@ -6,7 +6,8 @@ A simple debugger using `ptrace` and other required techniques to debug Linux pr
 
 ### TODOs
 
-- [ ] Implement a parser/grammar API for getting the actions, entities, and intents from the text input.
+- [X] Implement a parser/grammar API for getting the actions, entities, and intents from the text input.
+  - Used strtok for basic parsing.
 - [ ] Implement debugger symbol support for variables and functions.
 - [ ] Implement breakpoint support using INT.
 - [ ] Implement stack unwinding / backtrace support.
