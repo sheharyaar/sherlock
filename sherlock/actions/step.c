@@ -12,7 +12,6 @@
 
 REG_ACTION(step)
 {
-	pr_debug("action: step");
 	if (ptrace(PTRACE_SINGLESTEP, tracee->pid, NULL, NULL) == -1) {
 		pr_err("error in ptrace: %s", strerror(errno));
 		RET_ACTION(tracee, TRACEE_ERR);

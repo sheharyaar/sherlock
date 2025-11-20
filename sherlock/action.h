@@ -14,21 +14,17 @@
 #include <errno.h>
 #include <string.h>
 
-#define REG_ACTION(action) int action##_execute(tracee_t *tracee, char *input)
-#define CALL_ACTION(action, tracee, input) action##_execute(tracee, input)
-#define MATCH_ACTION(str, input) strncmp(str, input, strlen(str)) == 0
-
-#define MATCH_CALL_ACTION(tracee, input, action)                               \
-	do {                                                                   \
-		if (MATCH_ACTION(#action, input))                              \
-			return CALL_ACTION(action, tracee, input);             \
-	} while (0)
+#define REG_ACTION(action)                                                     \
+	int action##_execute(tracee_t *tracee, char *entity, char *args)
 
 #define RET_ACTION(tracee, ret)                                                \
 	do {                                                                   \
 		tracee->state = ret;                                           \
 		return tracee->state;                                          \
 	} while (0)
+
+#define MATCH_ENTITY(entity, target)                                           \
+	strncmp(entity, #target, strlen(#target)) == 0
 
 typedef enum {
 	// execution control

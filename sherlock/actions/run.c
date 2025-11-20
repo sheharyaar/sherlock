@@ -12,7 +12,6 @@
 
 REG_ACTION(run)
 {
-	pr_debug("action: run");
 	if (ptrace(PTRACE_CONT, tracee->pid, NULL, 0) == -1) {
 		pr_err("error in ptrace: %s", strerror(errno));
 		RET_ACTION(tracee, TRACEE_ERR);
