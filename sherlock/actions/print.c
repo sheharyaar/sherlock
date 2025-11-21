@@ -8,11 +8,16 @@
  */
 
 #include "../action.h"
+#include <ctype.h>
+#include <errno.h>
+#include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/ptrace.h>
 #include <sys/user.h>
 
-// TODO: ENTITY_VARIABLE,
+// TODO: print ENTITY_VARIABLE
+// TODO: pass hex as arg
 
 #define MATCH_REG(reg, target)                                                 \
 	do {                                                                   \
@@ -21,6 +26,62 @@
 			return;                                                \
 		}                                                              \
 	} while (0)
+
+#define MATCH_REG_ADDR(reg, target)                                            \
+	do {                                                                   \
+		if (strncmp(reg, #target, strlen(#target)) == 0) {             \
+			pr_info_raw("%#llx\n", regs.target);                   \
+			return;                                                \
+		}                                                              \
+	} while (0)
+
+void print_addr(tracee_t *tracee, char *addr)
+{
+	if (addr == NULL) {
+		pr_err("invalid address passed");
+		return;
+	}
+
+	// need to check this later, since PEEK* can return -1 as the value
+	bool hex = false;
+	long data;
+	unsigned long long raddr;
+
+	// check for alphabets
+	int i = 0;
+	while (addr[i]) {
+		if (isalpha(addr[i])) {
+			hex = true;
+			break;
+		}
+		i++;
+	}
+
+	int base = (hex) ? 16 : 10;
+	errno = 0;
+	raddr = strtoull(addr, NULL, base);
+	if (errno != 0) {
+		pr_err("invalid address passed, only decimal/hex supported");
+		return;
+	}
+
+	data = ptrace(PTRACE_PEEKDATA, tracee->pid, raddr, NULL);
+	if (data == -1 && errno != 0) {
+		// some error occured
+		if (errno == EIO || errno == EFAULT) {
+			pr_info_raw("the requested memory address(%#llx) is "
+				    "not accessible\n",
+			    raddr);
+		} else {
+			pr_err("reading the address(%#llx) failed: %s", raddr,
+			    strerror(errno));
+		}
+
+		return;
+	}
+
+	pr_info_raw("0x%016lx\n", data);
+}
 
 void print_reg(tracee_t *tracee, char *reg)
 {
@@ -43,9 +104,9 @@ void print_reg(tracee_t *tracee, char *reg)
 	MATCH_REG(reg, rdx);
 	MATCH_REG(reg, rsi);
 	MATCH_REG(reg, rdi);
-	MATCH_REG(reg, rsp);
-	MATCH_REG(reg, rbp);
-	MATCH_REG(reg, rip);
+	MATCH_REG_ADDR(reg, rsp);
+	MATCH_REG_ADDR(reg, rbp);
+	MATCH_REG_ADDR(reg, rip);
 	MATCH_REG(reg, r8);
 	MATCH_REG(reg, r9);
 	MATCH_REG(reg, r10);
@@ -64,11 +125,17 @@ REG_ACTION(print)
 		goto out;
 	}
 
-	if (MATCH_ENTITY(entity, reg)) {
+	if (MATCH_STR(entity, reg)) {
 		print_reg(tracee, args);
 		goto out;
 	}
 
+	if (MATCH_STR(entity, addr)) {
+		print_addr(tracee, args);
+		goto out;
+	}
+
+	pr_info("invalid parameters");
 out:
 	RET_ACTION(tracee, TRACEE_STOPPED);
 }

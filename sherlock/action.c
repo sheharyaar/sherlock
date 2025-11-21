@@ -11,6 +11,7 @@
 #include "sherlock.h"
 #include "action.h"
 #include <search.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define MATCH_CALL_ACTION(target)                                              \
@@ -31,6 +32,10 @@ tracee_state_t action_parse_input(tracee_t *tracee, char *input)
 
 	char *entity = strtok(NULL, " ");
 	char *args = strtok(NULL, " ");
+
+	if (MATCH_STR(action, q) || MATCH_STR(action, quit)) {
+		exit(1);
+	}
 
 	MATCH_CALL_ACTION(run);
 	MATCH_CALL_ACTION(kill);

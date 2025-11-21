@@ -23,8 +23,7 @@
 		return tracee->state;                                          \
 	} while (0)
 
-#define MATCH_ENTITY(entity, target)                                           \
-	strncmp(entity, #target, strlen(#target)) == 0
+#define MATCH_STR(str, target) strncmp(str, #target, strlen(#target)) == 0
 
 typedef enum {
 	// execution control
