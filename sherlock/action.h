@@ -65,5 +65,6 @@ REG_ACTION(run);
 REG_ACTION(kill);
 REG_ACTION(step);
 REG_ACTION(print);
+REG_ACTION(break);
 
 #endif
