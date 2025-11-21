@@ -8,9 +8,13 @@ A simple debugger using `ptrace` and other required techniques to debug Linux pr
 
 - [X] Implement a parser/grammar API for getting the actions, entities, and intents from the text input.
   - Used strtok for basic parsing.
-- [ ] Implement debugger symbol support for variables and functions.
 - [ ] Implement breakpoint support using INT.
+- [ ] Implement debugger symbol support for variables and functions.
 - [ ] Implement stack unwinding / backtrace support.
+
+Additional nice to haves:
+- [ ] hex, binary and string printing
+- [ ] relative addressing modes (with file base, instruction pointer) when using commands like print
 
 ### Notes
 

@@ -17,7 +17,6 @@
 #include <sys/user.h>
 
 // TODO: print ENTITY_VARIABLE
-// TODO: pass hex as arg
 
 #define MATCH_REG(reg, target)                                                 \
 	do {                                                                   \
