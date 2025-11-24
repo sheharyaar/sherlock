@@ -25,7 +25,8 @@
 
 #define MATCH_STR(str, target) strncmp(str, #target, strlen(#target)) == 0
 
-typedef enum {
+/*
+Actions:
 	// execution control
 	ACTION_RUN,
 	ACTION_STEP,
@@ -42,29 +43,24 @@ typedef enum {
 	// thread
 	ACTION_THREAD,	     // TODO
 	ACTION_THREAD_APPLY, // TODO
-	// number of actions
-	ACTION_COUNT,
-} action_type;
 
-typedef enum {
+entities:
 	ENTITY_FUNCTION,
 	ENTITY_VARIABLE,
 	ENTITY_ADDRESS,
 	ENTITY_LINE,
 	ENTITY_FILE_LINE,
 	ENTITY_REGISTER,
-	ENTITY_COUNT
-} entity_type;
-
-typedef struct TRACEE_ACTION {
-	entity_type entity;
-	unsigned long long val;
-} action_t;
+	ENTITY_BREAKPOINT,
+*/
 
 REG_ACTION(run);
 REG_ACTION(kill);
 REG_ACTION(step);
 REG_ACTION(print);
 REG_ACTION(break);
+REG_ACTION(info);
+
+void print_regs(tracee_t *tracee);
 
 #endif

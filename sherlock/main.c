@@ -29,7 +29,7 @@
 
 static tracee_t global_tracee = {
 	.pid = 0,
-	.breakpoints = NULL,
+	.bp = NULL,
 	.va_base = 0,
 	.name[0] = '\0',
 	.state = -1,

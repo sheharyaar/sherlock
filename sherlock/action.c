@@ -34,7 +34,7 @@ tracee_state_t action_parse_input(tracee_t *tracee, char *input)
 	char *args = strtok(NULL, " ");
 
 	if (MATCH_STR(action, q) || MATCH_STR(action, quit)) {
-		exit(1);
+		exit(0);
 	}
 
 	MATCH_CALL_ACTION(run);
@@ -42,6 +42,7 @@ tracee_state_t action_parse_input(tracee_t *tracee, char *input)
 	MATCH_CALL_ACTION(step);
 	MATCH_CALL_ACTION(print);
 	MATCH_CALL_ACTION(break);
+	MATCH_CALL_ACTION(info);
 
 	pr_err("invalid input");
 	// This is a special case where the debugger doesn't need to shut down

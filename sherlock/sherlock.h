@@ -27,11 +27,14 @@ typedef enum {
 
 typedef struct BREAKPOINT {
 	unsigned long long addr;
+	long value;
+	struct BREAKPOINT *next;
+	unsigned int idx;
 } breakpoint_t;
 
 typedef struct TRACEE {
 	pid_t pid;
-	breakpoint_t *breakpoints;
+	breakpoint_t *bp;
 	unsigned long long va_base;
 	char name[SHERLOCK_MAX_STRLEN];
 	tracee_state_t state;
