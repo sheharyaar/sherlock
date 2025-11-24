@@ -40,6 +40,14 @@ static int breakpoint_add(
 	}
 	bp->next = tracee->bp;
 	tracee->bp = bp;
+
+	unsigned long val = (bpvalue & 0xFFFFFFFFFFFFFF00UL) | 0xCCUL;
+	if (ptrace(PTRACE_POKETEXT, tracee->pid, bpaddr, val) == -1) {
+		pr_err("breakpoint_add: error in PTRACE_POKETEXT- %s",
+		    strerror(errno));
+		return -1;
+	}
+
 	return 0;
 }
 

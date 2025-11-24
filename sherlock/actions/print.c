@@ -22,6 +22,12 @@
 
 #define PRINT_REG_ADDR(regs, target) pr_info_raw("%#llx\n", regs.target);
 
+#define PRINT_REG_STR(regs, target)                                            \
+	pr_info_raw("%s=%lld\n", #target, regs.target);
+
+#define PRINT_REG_ADDR_STR(regs, target)                                       \
+	pr_info_raw("%s=%#llx\n", #target, regs.target);
+
 #define MATCH_REG(regs, reg, target)                                           \
 	do {                                                                   \
 		if (strncmp(reg, #target, strlen(#target)) == 0) {             \
@@ -90,7 +96,8 @@ static void print_reg(tracee_t *tracee, char *reg)
 {
 	struct user_regs_struct regs;
 	if (ptrace(PTRACE_GETREGS, tracee->pid, NULL, &regs) == -1) {
-		pr_err("error in getting registers");
+		pr_err("print_reg: error in getting registers: %s",
+		    strerror(errno));
 		return;
 	}
 
@@ -125,34 +132,35 @@ void print_regs(tracee_t *tracee)
 {
 	struct user_regs_struct regs;
 	if (ptrace(PTRACE_GETREGS, tracee->pid, NULL, &regs) == -1) {
-		pr_err("error in getting registers");
+		pr_err("print_regs: error in getting registers: %s",
+		    strerror(errno));
 		return;
 	}
 
-	PRINT_REG(regs, cs);
-	PRINT_REG(regs, ds);
-	PRINT_REG(regs, es);
-	PRINT_REG(regs, fs);
-	PRINT_REG(regs, gs);
-	PRINT_REG(regs, ss);
-	PRINT_REG(regs, eflags);
-	PRINT_REG(regs, rax);
-	PRINT_REG(regs, rbx);
-	PRINT_REG(regs, rcx);
-	PRINT_REG(regs, rdx);
-	PRINT_REG(regs, rsi);
-	PRINT_REG(regs, rdi);
-	PRINT_REG_ADDR(regs, rsp);
-	PRINT_REG_ADDR(regs, rbp);
-	PRINT_REG_ADDR(regs, rip);
-	PRINT_REG(regs, r8);
-	PRINT_REG(regs, r9);
-	PRINT_REG(regs, r10);
-	PRINT_REG(regs, r11);
-	PRINT_REG(regs, r12);
-	PRINT_REG(regs, r13);
-	PRINT_REG(regs, r14);
-	PRINT_REG(regs, r15);
+	PRINT_REG_STR(regs, cs);
+	PRINT_REG_STR(regs, ds);
+	PRINT_REG_STR(regs, es);
+	PRINT_REG_STR(regs, fs);
+	PRINT_REG_STR(regs, gs);
+	PRINT_REG_STR(regs, ss);
+	PRINT_REG_STR(regs, eflags);
+	PRINT_REG_STR(regs, rax);
+	PRINT_REG_STR(regs, rbx);
+	PRINT_REG_STR(regs, rcx);
+	PRINT_REG_STR(regs, rdx);
+	PRINT_REG_STR(regs, rsi);
+	PRINT_REG_STR(regs, rdi);
+	PRINT_REG_ADDR_STR(regs, rsp);
+	PRINT_REG_ADDR_STR(regs, rbp);
+	PRINT_REG_ADDR_STR(regs, rip);
+	PRINT_REG_STR(regs, r8);
+	PRINT_REG_STR(regs, r9);
+	PRINT_REG_STR(regs, r10);
+	PRINT_REG_STR(regs, r11);
+	PRINT_REG_STR(regs, r12);
+	PRINT_REG_STR(regs, r13);
+	PRINT_REG_STR(regs, r14);
+	PRINT_REG_STR(regs, r15);
 }
 
 REG_ACTION(print)

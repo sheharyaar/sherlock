@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/user.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -121,6 +122,46 @@ int setup(int argc, char *argv[], tracee_t *tracee)
 	print_help_exit(1);
 }
 
+// TOOD: Make the brealpoint permanent
+static void breakpoint_handle(tracee_t *tracee)
+{
+	struct user_regs_struct regs;
+	if (ptrace(PTRACE_GETREGS, tracee->pid, NULL, &regs) == -1) {
+		pr_err("breakpoint_handle: error in getting registers: %s",
+		    strerror(errno));
+		return;
+	}
+
+	bool found = false;
+	breakpoint_t *bp = tracee->bp;
+	while (bp) {
+		if (bp->addr + 1 == regs.rip) {
+			found = true;
+			break;
+		}
+
+		bp = bp->next;
+	}
+
+	// replace the change text and reset the rip
+	if (found) {
+		pr_debug("trap belongs to breakpoint %d", bp->idx);
+		unsigned long val = bp->value;
+		if (ptrace(PTRACE_POKETEXT, tracee->pid, bp->addr, val) == -1) {
+			pr_err("breakpoint_handle: ptrace POKETEXT err - %s",
+			    strerror(errno));
+			return;
+		}
+
+		regs.rip -= 1;
+		if (ptrace(PTRACE_SETREGS, tracee->pid, NULL, &regs) == -1) {
+			pr_err("breakpoint_handle: ptrace SETREGS error - %s",
+			    strerror(errno));
+			return;
+		}
+	}
+}
+
 // TODO: Add signal handler to send SIGINT to tracee instead of debugger
 
 int main(int argc, char *argv[])
@@ -195,6 +236,11 @@ int main(int argc, char *argv[])
 			if (WIFSTOPPED(wstatus)) {
 				pr_info("tracee received signal: %s",
 				    strsignal(WSTOPSIG(wstatus)));
+
+				if (WSTOPSIG(wstatus) == SIGTRAP) {
+					// could be a breakpoint stop
+					breakpoint_handle(&global_tracee);
+				}
 			}
 
 			global_tracee.state = TRACEE_STOPPED;
