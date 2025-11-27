@@ -6,11 +6,22 @@ A simple debugger using `ptrace` and other required techniques to debug Linux pr
 
 ### TODOs
 
-- [X] Implement a parser/grammar API for getting the actions, entities, and intents from the text input.
-  - Used strtok for basic parsing.
-- [ ] Implement breakpoint support using INT.
-- [ ] Implement debugger symbol support for variables and functions.
-- [ ] Implement stack unwinding / backtrace support.
+- Logically rearrange the code, already broken in actions, entities, now break the waits (stops) into signal stops, breakpoint stops, etc.
+  - [ ] Each action should register its handlers with a specific signature (entity, args).
+  - [ ] Each stop type (event) should also have a handler to make it easy to handle permanent breakpoints.
+- Implement a parser/grammar API for getting the actions, entities, and intents from the text input.
+  - [X] Used strtok for basic parsing.
+- Implement breakpoint support using INT.
+  - [X] Basic breakpoint setting and listing -- works once per breakpoint command (like temporary breakpoints).
+  - [ ] Ability to encapsulate/hide the internal breakpoint handling from the user (when the user prints the address of the breakpoint, it should show the original instruction, not the INT instruction).
+  - [ ] Support temporary and permanent breakpoints.
+- Implement debugger symbol support for variables and functions.
+  - [ ] Support for PLT symbols.
+  - [ ] Support for local variables.
+  - [ ] Support for function arguments.
+- Implement stack unwinding / backtrace support.
+  - [ ] Look into eh_frame and debug_frame sections for DWARF info.
+- Implement watchpoints using hardware breakpoints.
 
 Additional nice to haves:
 - [ ] hex, binary and string printing
