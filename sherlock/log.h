@@ -47,4 +47,11 @@
 
 #define DBG_PREFIX COLOR_INF "dbg>" COLOR_RESET " "
 
+#define ERR_RET_MSG(err, msg, ...)                                             \
+	do {                                                                   \
+		pr_debug(msg, ##__VA_ARGS__);                                  \
+		errno = err;                                                   \
+		return -1;                                                     \
+	} while (0)
+
 #endif

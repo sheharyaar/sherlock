@@ -23,7 +23,7 @@ typedef enum {
 	TRACEE_STOPPED,
 	TRACEE_KILLED,
 	TRACEE_ERR
-} tracee_state_t;
+} tracee_state_e;
 
 typedef struct BREAKPOINT {
 	unsigned long long addr;
@@ -37,14 +37,12 @@ typedef struct TRACEE {
 	breakpoint_t *bp;
 	unsigned long long va_base;
 	char name[SHERLOCK_MAX_STRLEN];
-	tracee_state_t state;
+	tracee_state_e state;
 } tracee_t;
 
 int tracee_setup_pid(tracee_t *tracee, int pid);
 int tracee_setup_exec(tracee_t *tracee, char *argv[]);
 
 int elf_mem_va_base(tracee_t *tracee);
-
-tracee_state_t action_parse_input(tracee_t *t, char *input);
 
 #endif

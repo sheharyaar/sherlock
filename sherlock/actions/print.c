@@ -32,7 +32,7 @@
 	do {                                                                   \
 		if (strncmp(reg, #target, strlen(#target)) == 0) {             \
 			PRINT_REG(regs, target);                               \
-			return;                                                \
+			return TRACEE_STOPPED;                                 \
 		}                                                              \
 	} while (0)
 
@@ -40,15 +40,15 @@
 	do {                                                                   \
 		if (strncmp(reg, #target, strlen(#target)) == 0) {             \
 			PRINT_REG_ADDR(regs, target)                           \
-			return;                                                \
+			return TRACEE_STOPPED;                                 \
 		}                                                              \
 	} while (0)
 
-static void print_addr(tracee_t *tracee, char *addr)
+static tracee_state_e print_addr(tracee_t *tracee, char *addr)
 {
 	if (addr == NULL) {
 		pr_err("invalid address passed");
-		return;
+		return TRACEE_STOPPED;
 	}
 
 	// need to check this later, since PEEK* can return -1 as the value
@@ -71,7 +71,7 @@ static void print_addr(tracee_t *tracee, char *addr)
 	raddr = strtoull(addr, NULL, base);
 	if (errno != 0) {
 		pr_err("invalid address passed, only decimal/hex supported");
-		return;
+		return TRACEE_STOPPED;
 	}
 
 	data = ptrace(PTRACE_PEEKDATA, tracee->pid, raddr, NULL);
@@ -86,19 +86,60 @@ static void print_addr(tracee_t *tracee, char *addr)
 			    strerror(errno));
 		}
 
-		return;
+		return TRACEE_STOPPED;
 	}
 
 	pr_info_raw("0x%016lx\n", data);
+	return TRACEE_STOPPED;
 }
 
-static void print_reg(tracee_t *tracee, char *reg)
+static tracee_state_e print_regs(tracee_t *tracee, char *args)
 {
+	struct user_regs_struct regs;
+	if (ptrace(PTRACE_GETREGS, tracee->pid, NULL, &regs) == -1) {
+		pr_err("print_regs: error in getting registers: %s",
+		    strerror(errno));
+		return TRACEE_ERR;
+	}
+
+	PRINT_REG_STR(regs, cs);
+	PRINT_REG_STR(regs, ds);
+	PRINT_REG_STR(regs, es);
+	PRINT_REG_STR(regs, fs);
+	PRINT_REG_STR(regs, gs);
+	PRINT_REG_STR(regs, ss);
+	PRINT_REG_STR(regs, eflags);
+	PRINT_REG_STR(regs, rax);
+	PRINT_REG_STR(regs, rbx);
+	PRINT_REG_STR(regs, rcx);
+	PRINT_REG_STR(regs, rdx);
+	PRINT_REG_STR(regs, rsi);
+	PRINT_REG_STR(regs, rdi);
+	PRINT_REG_ADDR_STR(regs, rsp);
+	PRINT_REG_ADDR_STR(regs, rbp);
+	PRINT_REG_ADDR_STR(regs, rip);
+	PRINT_REG_STR(regs, r8);
+	PRINT_REG_STR(regs, r9);
+	PRINT_REG_STR(regs, r10);
+	PRINT_REG_STR(regs, r11);
+	PRINT_REG_STR(regs, r12);
+	PRINT_REG_STR(regs, r13);
+	PRINT_REG_STR(regs, r14);
+	PRINT_REG_STR(regs, r15);
+	return TRACEE_STOPPED;
+}
+
+static tracee_state_e print_reg(tracee_t *tracee, char *reg)
+{
+	if (MATCH_STR(reg, "all")) {
+		return print_regs(tracee, NULL);
+	}
+
 	struct user_regs_struct regs;
 	if (ptrace(PTRACE_GETREGS, tracee->pid, NULL, &regs) == -1) {
 		pr_err("print_reg: error in getting registers: %s",
 		    strerror(errno));
-		return;
+		return TRACEE_ERR;
 	}
 
 	MATCH_REG(regs, reg, cs);
@@ -126,61 +167,15 @@ static void print_reg(tracee_t *tracee, char *reg)
 	MATCH_REG(regs, reg, r14);
 	MATCH_REG(regs, reg, r15);
 	pr_err("invalid register");
+	return TRACEE_STOPPED;
 }
 
-void print_regs(tracee_t *tracee)
-{
-	struct user_regs_struct regs;
-	if (ptrace(PTRACE_GETREGS, tracee->pid, NULL, &regs) == -1) {
-		pr_err("print_regs: error in getting registers: %s",
-		    strerror(errno));
-		return;
-	}
+static action_t action_print = {
+	.type = ACTION_PRINT,
+	.handler = {
+		[ENTITY_REGISTER] = print_reg,
+		[ENTITY_ADDRESS] = print_addr,
+	},
+};
 
-	PRINT_REG_STR(regs, cs);
-	PRINT_REG_STR(regs, ds);
-	PRINT_REG_STR(regs, es);
-	PRINT_REG_STR(regs, fs);
-	PRINT_REG_STR(regs, gs);
-	PRINT_REG_STR(regs, ss);
-	PRINT_REG_STR(regs, eflags);
-	PRINT_REG_STR(regs, rax);
-	PRINT_REG_STR(regs, rbx);
-	PRINT_REG_STR(regs, rcx);
-	PRINT_REG_STR(regs, rdx);
-	PRINT_REG_STR(regs, rsi);
-	PRINT_REG_STR(regs, rdi);
-	PRINT_REG_ADDR_STR(regs, rsp);
-	PRINT_REG_ADDR_STR(regs, rbp);
-	PRINT_REG_ADDR_STR(regs, rip);
-	PRINT_REG_STR(regs, r8);
-	PRINT_REG_STR(regs, r9);
-	PRINT_REG_STR(regs, r10);
-	PRINT_REG_STR(regs, r11);
-	PRINT_REG_STR(regs, r12);
-	PRINT_REG_STR(regs, r13);
-	PRINT_REG_STR(regs, r14);
-	PRINT_REG_STR(regs, r15);
-}
-
-REG_ACTION(print)
-{
-	if (args == NULL) {
-		pr_err("invalid input");
-		goto out;
-	}
-
-	if (MATCH_STR(entity, reg)) {
-		print_reg(tracee, args);
-		goto out;
-	}
-
-	if (MATCH_STR(entity, addr)) {
-		print_addr(tracee, args);
-		goto out;
-	}
-
-	pr_info("invalid parameters");
-out:
-	RET_ACTION(tracee, TRACEE_STOPPED);
-}
+REG_ACTION(print, &action_print);

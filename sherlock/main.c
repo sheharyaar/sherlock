@@ -10,6 +10,7 @@
 #define _GNU_SOURCE
 #include "log.h"
 #include "sherlock.h"
+#include "action.h"
 #include <assert.h>
 #include <errno.h>
 #include <signal.h>
@@ -195,7 +196,7 @@ int main(int argc, char *argv[])
 #endif
 
 	char input[SHERLOCK_MAX_STRLEN];
-	tracee_state_t ret;
+	tracee_state_e ret;
 
 	/*
 	Each action/input requires the tracee to be in stopped state. Initially,

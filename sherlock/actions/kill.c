@@ -11,14 +11,21 @@
 #include <signal.h>
 #include <stdio.h>
 
-REG_ACTION(kill)
+static tracee_state_e kill_tracee(tracee_t *tracee, char *args)
 {
 	pr_info_raw("Do you really want to kill the tracee (Y / N): ");
 	char opt[8];
 	fgets(opt, 8, stdin);
 	if (opt[0] == 'y' || opt[0] == 'Y') {
 		kill(tracee->pid, SIGKILL);
-		RET_ACTION(tracee, TRACEE_KILLED);
+		return TRACEE_KILLED;
 	}
-	RET_ACTION(tracee, TRACEE_STOPPED);
+
+	return TRACEE_STOPPED;
 }
+
+static action_t action_kill = { .type = ACTION_KILL,
+	.handler = { [ENTITY_NONE] = kill_tracee, },
+	};
+
+REG_ACTION(kill, &action_kill);

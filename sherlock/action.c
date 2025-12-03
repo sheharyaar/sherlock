@@ -14,13 +14,99 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MATCH_CALL_ACTION(target)                                              \
-	do {                                                                   \
-		if (strncmp(#target, action, strlen(#target)) == 0)            \
-			return target##_execute(tracee, entity, args);         \
-	} while (0)
+// list of all action handlers
+static action_t *action_list[ACTION_COUNT] = { 0 };
 
-tracee_state_t action_parse_input(tracee_t *tracee, char *input)
+static const char *entity_to_str(entity_e ent) { return NULL; }
+
+static action_e str_to_action(char *act_str)
+{
+	for (int act = 0; act < ACTION_COUNT; act++) {
+		if (action_list[act] != NULL &&
+		    strncmp(act_str, action_list[act]->name, strlen(act_str)) ==
+			0) {
+			return act;
+		}
+	}
+
+	return ACTION_COUNT;
+}
+
+static entity_e str_to_entity(char *ent_str)
+{
+	for (int ent = 0; ent < ENTITY_COUNT; ent++) {
+		if (strncmp(act_str, action_list[act]->name, strlen(act_str)) ==
+		    0) {
+			return act;
+		}
+	}
+
+	return ENTITY_COUNT;
+}
+
+void print_supported_actions()
+{
+	pr_info_raw("Supported actions are: ");
+	for (int act = 0; act < ACTION_COUNT; act++) {
+		if (action_list[act] != NULL) {
+			pr_info_raw("%s ", action_list[act]->name);
+		}
+	}
+	pr_info_raw("\n");
+}
+
+void print_supported_entities(action_e act)
+{
+	if (act == ACTION_COUNT) {
+		pr_err("print_supported_entities: invalid action passed");
+		return;
+	}
+
+	pr_info_raw("Supported entities are: ");
+	for (int ent = 0; ent < ENTITY_COUNT; ent++) {
+		if (action_list[act]->handler[ent] != NULL) {
+			pr_info_raw("%s, ", entity_to_str(ent));
+		}
+	}
+	pr_info_raw("\n");
+}
+
+int action_handler_reg(action_t *act)
+{
+	if (act == NULL) {
+		ERR_RET_MSG(EINVAL, "passed arg 'act' is NULL");
+	}
+
+	if (act->type < 0 || act->type >= ACTION_COUNT) {
+		ERR_RET_MSG(EINVAL, "invalid act->type(%d)", act->type);
+	}
+
+	if (action_list[act->type] != NULL) {
+		ERR_RET_MSG(
+		    EEXIST, "handler for type(%d) already exists", act->type);
+	}
+
+	action_list[act->type] = act;
+	return 0;
+}
+
+tracee_state_e action_handler_call(
+    tracee_t *t, action_e act, entity_e ent, char *args)
+{
+	if (action_list[act] == NULL) {
+		pr_err("invalid action(%d) requested", act);
+		return TRACEE_STOPPED;
+	}
+
+	if (action_list[act]->handler[ent] == NULL) {
+		pr_err("invalid entity(%d) for action(%d) requested", ent, act);
+		return TRACEE_STOPPED;
+	}
+
+	return action_list[act]->handler[ent](t, args);
+}
+
+tracee_state_e action_parse_input(tracee_t *tracee, char *input)
 {
 	// remove the trailing \n;
 	input[strlen(input)] = '\0';
@@ -37,15 +123,21 @@ tracee_state_t action_parse_input(tracee_t *tracee, char *input)
 		exit(0);
 	}
 
-	MATCH_CALL_ACTION(run);
-	MATCH_CALL_ACTION(kill);
-	MATCH_CALL_ACTION(step);
-	MATCH_CALL_ACTION(print);
-	MATCH_CALL_ACTION(break);
-	MATCH_CALL_ACTION(info);
+	// break into action and entity
+	// TODO: helper function with supported actions and entities
+	action_e act = str_to_action(action);
+	if (act == ACTION_COUNT) {
+		pr_err("invalid action: '%s'", action);
+		print_supported_actions();
+		return TRACEE_STOPPED;
+	}
 
-	pr_err("invalid input");
-	// This is a special case where the debugger doesn't need to shut down
-	// if invalid input is received.
-	RET_ACTION(tracee, TRACEE_STOPPED);
+	entity_e ent = str_to_entity(entity);
+	if (ent == ENTITY_COUNT) {
+		pr_err("invalid entity: '%s'", entity);
+		print_supported_entities(act);
+		return TRACEE_STOPPED;
+	}
+
+	return action_handler_call(tracee, act, ent, args);
 }

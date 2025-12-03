@@ -10,12 +10,21 @@
 #include "../action.h"
 #include <sys/ptrace.h>
 
-REG_ACTION(run)
+static tracee_state_e run(tracee_t *tracee, char *args)
 {
 	if (ptrace(PTRACE_CONT, tracee->pid, NULL, 0) == -1) {
 		pr_err("error in ptrace: %s", strerror(errno));
-		RET_ACTION(tracee, TRACEE_ERR);
+		return TRACEE_ERR;
 	}
 
-	RET_ACTION(tracee, TRACEE_RUNNING);
+	return TRACEE_RUNNING;
 }
+
+static action_t action_run = { 
+	.type = ACTION_RUN,
+	.handler = {
+	    [ENTITY_NONE] = run,
+	},
+};
+
+REG_ACTION(run, &action_run);

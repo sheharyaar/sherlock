@@ -23,13 +23,13 @@ TODO:
 performance and then port to debugger.
 */
 
-static int breakpoint_add(
+static tracee_state_e breakpoint_add(
     tracee_t *tracee, unsigned long long bpaddr, unsigned long bpvalue)
 {
 	breakpoint_t *bp = (breakpoint_t *)calloc(1, sizeof(breakpoint_t));
 	if (bp == NULL) {
-		pr_err("out of memory, cannot allocate breakpoint");
-		return -1;
+		pr_err("breakpoint_add: cannot allocate breakpoint");
+		return TRACEE_ERR;
 	}
 
 	bp->addr = bpaddr;
@@ -45,20 +45,20 @@ static int breakpoint_add(
 	if (ptrace(PTRACE_POKETEXT, tracee->pid, bpaddr, val) == -1) {
 		pr_err("breakpoint_add: error in PTRACE_POKETEXT- %s",
 		    strerror(errno));
-		return -1;
+		return TRACEE_ERR;
 	}
 
-	return 0;
+	return TRACEE_STOPPED;
 }
 
-static int breakpoint_addr(tracee_t *tracee, char *addr)
+static tracee_state_e breakpoint_addr(tracee_t *tracee, char *addr)
 {
 	errno = 0;
 	// the address has to be in hex format
 	unsigned long long bpaddr = strtoull(addr, NULL, 16);
 	if (errno != 0) {
 		pr_err("invalid address passed, only hex supported");
-		return -1;
+		return TRACEE_STOPPED;
 	}
 
 	pr_debug("breaking address: %#llx", bpaddr);
@@ -74,32 +74,17 @@ static int breakpoint_addr(tracee_t *tracee, char *addr)
 			    strerror(errno));
 		}
 
-		return -1;
+		// this is not a critical error
+		return TRACEE_STOPPED;
 	}
 
 	pr_debug("instruction at address(%#llx): %#lx", bpaddr, (data & 0xFF));
 	return breakpoint_add(tracee, bpaddr, data);
 }
 
-// Inserts a breakpoint given at address addr iff the mapping allows
-// execution. The address has to be in hex format.
-REG_ACTION(break)
-{
-	if (args == NULL) {
-		pr_err("no breaking point passed or passed as 2nd arg "
-		       "instead "
-		       "of 3rd");
-		goto out;
-	}
+static action_t action_break = {
+	.type = ACTION_BREAK,
+	.handler = {[ENTITY_ADDRESS] = breakpoint_addr,},
+};
 
-	if (MATCH_STR(entity, addr)) {
-		if (breakpoint_addr(tracee, args) == -1)
-			pr_err("breakpoint attach failed");
-
-		goto out;
-	}
-
-	pr_err("invalid input, usage: break <addr> <0xaddress>");
-out:
-	RET_ACTION(tracee, TRACEE_STOPPED);
-}
+REG_ACTION(breakpoint, &action_break);
