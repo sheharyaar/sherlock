@@ -16,8 +16,9 @@
 #include <stdbool.h>
 #include <math.h>
 
+// Not using strncmp here, as I want to match the complete string, not the pref
 #define MATCH_STR(str_var, str)                                                \
-	strncmp(str_var, #str, fmax(strlen(str_var), strlen(#str))) == 0
+	strcmp(str_var, #str) == 0
 
 typedef enum ENTITY_E {
 	ENTITY_FUNCTION,
