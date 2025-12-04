@@ -20,11 +20,15 @@ static tracee_state_e run(tracee_t *tracee, char *args)
 	return TRACEE_RUNNING;
 }
 
+static bool match_run(char *act) { return MATCH_STR(act, run); }
+
 static action_t action_run = { 
 	.type = ACTION_RUN,
-	.handler = {
+	.ent_handler = {
 	    [ENTITY_NONE] = run,
 	},
+	.match_action = match_run,
+	.name = "run"
 };
 
 REG_ACTION(run, &action_run);

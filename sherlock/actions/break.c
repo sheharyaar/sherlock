@@ -82,9 +82,16 @@ static tracee_state_e breakpoint_addr(tracee_t *tracee, char *addr)
 	return breakpoint_add(tracee, bpaddr, data);
 }
 
+static bool match_break(char *act)
+{
+	return (MATCH_STR(act, break) || MATCH_STR(act, br));
+}
+
 static action_t action_break = {
 	.type = ACTION_BREAK,
-	.handler = {[ENTITY_ADDRESS] = breakpoint_addr,},
+	.ent_handler = {[ENTITY_ADDRESS] = breakpoint_addr,},
+	.match_action = match_break,
+	.name = "break",
 };
 
 REG_ACTION(breakpoint, &action_break);

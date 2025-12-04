@@ -14,17 +14,31 @@
 #include <stdlib.h>
 #include <string.h>
 
+static const char *entity_str[ENTITY_COUNT] = {
+	[ENTITY_FUNCTION] = "func",
+	[ENTITY_VARIABLE] = "var",
+	[ENTITY_ADDRESS] = "addr",
+	[ENTITY_LINE] = "line",
+	[ENTITY_FILE_LINE] = "file:line",
+	[ENTITY_REGISTER] = "reg",
+	[ENTITY_BREAKPOINT] = "break",
+	[ENTITY_NONE] = "<none>",
+};
+
 // list of all action handlers
 static action_t *action_list[ACTION_COUNT] = { 0 };
 
-static const char *entity_to_str(entity_e ent) { return NULL; }
-
 static action_e str_to_action(char *act_str)
 {
+	if (act_str == NULL) {
+		pr_err("action is NULL");
+		return ACTION_COUNT;
+	}
+
 	for (int act = 0; act < ACTION_COUNT; act++) {
 		if (action_list[act] != NULL &&
-		    strncmp(act_str, action_list[act]->name, strlen(act_str)) ==
-			0) {
+		    action_list[act]->match_action != NULL &&
+		    action_list[act]->match_action(act_str)) {
 			return act;
 		}
 	}
@@ -34,10 +48,14 @@ static action_e str_to_action(char *act_str)
 
 static entity_e str_to_entity(char *ent_str)
 {
-	for (int ent = 0; ent < ENTITY_COUNT; ent++) {
-		if (strncmp(act_str, action_list[act]->name, strlen(act_str)) ==
-		    0) {
-			return act;
+	if (ent_str == NULL) {
+		return ENTITY_NONE;
+	}
+
+	for (int ent = 0; ent < ENTITY_NONE; ent++) {
+		if (strncmp(ent_str, entity_str[ent],
+			fmax(strlen(entity_str[ent]), strlen(ent_str))) == 0) {
+			return ent;
 		}
 	}
 
@@ -64,8 +82,8 @@ void print_supported_entities(action_e act)
 
 	pr_info_raw("Supported entities are: ");
 	for (int ent = 0; ent < ENTITY_COUNT; ent++) {
-		if (action_list[act]->handler[ent] != NULL) {
-			pr_info_raw("%s, ", entity_to_str(ent));
+		if (action_list[act]->ent_handler[ent] != NULL) {
+			pr_info_raw("%s, ", entity_str[ent]);
 		}
 	}
 	pr_info_raw("\n");
@@ -83,7 +101,7 @@ int action_handler_reg(action_t *act)
 
 	if (action_list[act->type] != NULL) {
 		ERR_RET_MSG(
-		    EEXIST, "handler for type(%d) already exists", act->type);
+		    EEXIST, "handler for (%s) already exists", act->name);
 	}
 
 	action_list[act->type] = act;
@@ -98,18 +116,21 @@ tracee_state_e action_handler_call(
 		return TRACEE_STOPPED;
 	}
 
-	if (action_list[act]->handler[ent] == NULL) {
-		pr_err("invalid entity(%d) for action(%d) requested", ent, act);
+	// here both act and ent are valid, so can just print their names
+	if (action_list[act]->ent_handler[ent] == NULL) {
+		pr_err("invalid entity(%s) for action(%s) requested",
+		    entity_str[ent], action_list[act]->name);
+		print_supported_entities(act);
 		return TRACEE_STOPPED;
 	}
 
-	return action_list[act]->handler[ent](t, args);
+	return action_list[act]->ent_handler[ent](t, args);
 }
 
 tracee_state_e action_parse_input(tracee_t *tracee, char *input)
 {
 	// remove the trailing \n;
-	input[strlen(input)] = '\0';
+	input[strlen(input) - 1] = '\0';
 
 	char *action = strtok(input, " ");
 	if (action == NULL) {
@@ -124,7 +145,6 @@ tracee_state_e action_parse_input(tracee_t *tracee, char *input)
 	}
 
 	// break into action and entity
-	// TODO: helper function with supported actions and entities
 	action_e act = str_to_action(action);
 	if (act == ACTION_COUNT) {
 		pr_err("invalid action: '%s'", action);

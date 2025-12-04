@@ -34,7 +34,6 @@ static tracee_t global_tracee = {
 	.bp = NULL,
 	.va_base = 0,
 	.name[0] = '\0',
-	.state = -1,
 };
 
 static pid_t sherlock_pid = 0;
@@ -112,7 +111,6 @@ int setup(int argc, char *argv[], tracee_t *tracee)
 			}
 		}
 
-		tracee->state = TRACEE_INIT;
 		return 0;
 	err:
 		kill(tracee->pid, SIGKILL);
@@ -190,13 +188,8 @@ int main(int argc, char *argv[])
 	// 	return 1;
 	// }
 
-#if DEBUG
-	assert(global_tracee.state == TRACEE_INIT ||
-	    global_tracee.state == TRACEE_STOPPED);
-#endif
-
 	char input[SHERLOCK_MAX_STRLEN];
-	tracee_state_e ret;
+	tracee_state_e state;
 
 	/*
 	Each action/input requires the tracee to be in stopped state. Initially,
@@ -212,23 +205,22 @@ int main(int argc, char *argv[])
 	int wstatus = 0;
 	while (1) {
 		dbg_prompt(input, SHERLOCK_MAX_STRLEN);
-		ret = action_parse_input(&global_tracee, input);
-		if (ret == TRACEE_ERR) {
+		state = action_parse_input(&global_tracee, input);
+		if (state == TRACEE_ERR) {
 			pr_err("critical error, killing debugger");
 			return 1;
 		}
 
-		if (ret == TRACEE_KILLED) {
+		if (state == TRACEE_KILLED) {
 			pr_info("the tracee has been killed, exiting debugger");
 			return 0;
 		}
 
 #if DEBUG
-		assert(global_tracee.state == TRACEE_RUNNING ||
-		    global_tracee.state == TRACEE_STOPPED);
+		assert(state == TRACEE_RUNNING || state == TRACEE_STOPPED);
 #endif
 
-		if (global_tracee.state == TRACEE_RUNNING) {
+		if (state == TRACEE_RUNNING) {
 			if (waitpid(global_tracee.pid, &wstatus, 0) < 0) {
 				pr_err("waitpid err: %s", strerror(errno));
 				return 1;
@@ -244,7 +236,7 @@ int main(int argc, char *argv[])
 				}
 			}
 
-			global_tracee.state = TRACEE_STOPPED;
+			state = TRACEE_STOPPED;
 		}
 	}
 

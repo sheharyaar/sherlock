@@ -13,15 +13,13 @@
 #include "sherlock.h"
 #include <errno.h>
 #include <string.h>
+#include <stdbool.h>
+#include <math.h>
 
-#define MATCH_STR(str, target) strncmp(str, #target, strlen(#target)) == 0
+#define MATCH_STR(str_var, str)                                                \
+	strncmp(str_var, #str, fmax(strlen(str_var), strlen(#str))) == 0
 
-// TODO: Complete this
-#define INIT_ENTITIES(...) \
-	typedef enum ENTITY_E { __VA_ARGS__ } entity_e; \
-	const char *entity_str[] = {#__VA_ARGS__};
-
-INIT_ENTITIES(
+typedef enum ENTITY_E {
 	ENTITY_FUNCTION,
 	ENTITY_VARIABLE,
 	ENTITY_ADDRESS,
@@ -31,7 +29,7 @@ INIT_ENTITIES(
 	ENTITY_BREAKPOINT,
 	ENTITY_NONE, // entities not belonging to the other above
 	ENTITY_COUNT
-)
+} entity_e;
 
 typedef enum ACTION_E {
 	ACTION_RUN,
@@ -51,12 +49,14 @@ typedef enum ACTION_E {
 	ACTION_COUNT,
 } action_e;
 
-typedef tracee_state_e (*entity_handler_t)(tracee_t *tracee, char *args);
+typedef tracee_state_e (*handler_entity_t)(tracee_t *tracee, char *args);
+typedef bool (*handler_match_t)(char *act);
 
 typedef struct ACTION_S {
 	action_e type;
-	entity_handler_t handler[ENTITY_COUNT];
-	char *name;
+	handler_entity_t ent_handler[ENTITY_COUNT];
+	handler_match_t match_action;
+	const char *name;
 } action_t;
 
 // Used by action handlers to register themselves

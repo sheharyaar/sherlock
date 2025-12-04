@@ -10,9 +10,9 @@
 #include "sherlock.h"
 #include <asm-generic/errno-base.h>
 #include <errno.h>
-#include <linux/limits.h>
 #include <stdbool.h>
 #include <string.h>
+#include <signal.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -112,7 +112,6 @@ int tracee_setup_pid(tracee_t *tracee, int pid)
 		return -1;
 	}
 
-	tracee->state = TRACEE_STOPPED;
 	return 0;
 }
 

@@ -19,11 +19,18 @@ static tracee_state_e step(tracee_t *tracee, char *args)
 	return TRACEE_RUNNING;
 }
 
+static bool match_step(char *act)
+{
+	return (MATCH_STR(act, step) || MATCH_STR(act, s));
+}
+
 static action_t action_step = { 
 	.type = ACTION_STEP,
-	.handler = {
+	.ent_handler = {
 	    [ENTITY_NONE] = step,
 	},
+	.match_action = match_step,
+	.name = "step",
 };
 
 REG_ACTION(step, &action_step);

@@ -30,7 +30,7 @@
 
 #define MATCH_REG(regs, reg, target)                                           \
 	do {                                                                   \
-		if (strncmp(reg, #target, strlen(#target)) == 0) {             \
+		if (MATCH_STR(reg, target)) {                                  \
 			PRINT_REG(regs, target);                               \
 			return TRACEE_STOPPED;                                 \
 		}                                                              \
@@ -38,7 +38,7 @@
 
 #define MATCH_REG_ADDR(regs, reg, target)                                      \
 	do {                                                                   \
-		if (strncmp(reg, #target, strlen(#target)) == 0) {             \
+		if (MATCH_STR(reg, target)) {                                  \
 			PRINT_REG_ADDR(regs, target)                           \
 			return TRACEE_STOPPED;                                 \
 		}                                                              \
@@ -93,7 +93,7 @@ static tracee_state_e print_addr(tracee_t *tracee, char *addr)
 	return TRACEE_STOPPED;
 }
 
-static tracee_state_e print_regs(tracee_t *tracee, char *args)
+static tracee_state_e print_regs(tracee_t *tracee)
 {
 	struct user_regs_struct regs;
 	if (ptrace(PTRACE_GETREGS, tracee->pid, NULL, &regs) == -1) {
@@ -131,8 +131,8 @@ static tracee_state_e print_regs(tracee_t *tracee, char *args)
 
 static tracee_state_e print_reg(tracee_t *tracee, char *reg)
 {
-	if (MATCH_STR(reg, "all")) {
-		return print_regs(tracee, NULL);
+	if (MATCH_STR(reg, all)) {
+		return print_regs(tracee);
 	}
 
 	struct user_regs_struct regs;
@@ -166,16 +166,23 @@ static tracee_state_e print_reg(tracee_t *tracee, char *reg)
 	MATCH_REG(regs, reg, r13);
 	MATCH_REG(regs, reg, r14);
 	MATCH_REG(regs, reg, r15);
-	pr_err("invalid register");
+	pr_err("invalid register: %s", reg);
 	return TRACEE_STOPPED;
+}
+
+static bool match_print(char *act)
+{
+	return (MATCH_STR(act, print) || MATCH_STR(act, p));
 }
 
 static action_t action_print = {
 	.type = ACTION_PRINT,
-	.handler = {
+	.ent_handler = {
 		[ENTITY_REGISTER] = print_reg,
 		[ENTITY_ADDRESS] = print_addr,
 	},
+	.match_action = match_print,
+	.name = "print",
 };
 
 REG_ACTION(print, &action_print);

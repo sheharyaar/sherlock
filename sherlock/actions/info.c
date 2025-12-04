@@ -27,11 +27,18 @@ static tracee_state_e info_regs(tracee_t *tracee, char *args)
 	    tracee, ACTION_PRINT, ENTITY_REGISTER, "all");
 }
 
+static bool match_info(char *act)
+{
+	return (MATCH_STR(act, info) || MATCH_STR(act, inf));
+}
+
 static action_t action_info = { .type = ACTION_INFO,
-	.handler = {
+	.ent_handler = {
 	    [ENTITY_BREAKPOINT] = info_breakpoints,
 	    [ENTITY_REGISTER] = info_regs,
-	}, 
+	},
+	.match_action = match_info,
+	.name = "info"
 };
 
 REG_ACTION(info, &action_info);

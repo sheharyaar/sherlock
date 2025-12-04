@@ -24,8 +24,12 @@ static tracee_state_e kill_tracee(tracee_t *tracee, char *args)
 	return TRACEE_STOPPED;
 }
 
+static bool match_kill(char *act) { return MATCH_STR(act, kill); }
+
 static action_t action_kill = { .type = ACTION_KILL,
-	.handler = { [ENTITY_NONE] = kill_tracee, },
+	.ent_handler = { [ENTITY_NONE] = kill_tracee, },
+	.match_action = match_kill,
+	.name = "kill"
 	};
 
 REG_ACTION(kill, &action_kill);
