@@ -144,7 +144,7 @@ static void breakpoint_handle(tracee_t *tracee)
 
 	// replace the change text and reset the rip
 	if (found) {
-		pr_debug("trap belongs to breakpoint %d", bp->idx);
+		pr_info_raw("Breakpoint %d, %#llx\n", bp->idx, bp->addr);
 		unsigned long val = bp->value;
 		if (ptrace(PTRACE_POKETEXT, tracee->pid, bp->addr, val) == -1) {
 			pr_err("breakpoint_handle: ptrace POKETEXT err - %s",
@@ -155,6 +155,33 @@ static void breakpoint_handle(tracee_t *tracee)
 		regs.rip -= 1;
 		if (ptrace(PTRACE_SETREGS, tracee->pid, NULL, &regs) == -1) {
 			pr_err("breakpoint_handle: ptrace SETREGS error - %s",
+			    strerror(errno));
+			return;
+		}
+
+		// single step and reset
+		if (ptrace(PTRACE_SINGLESTEP, tracee->pid, NULL, NULL) == -1) {
+			pr_err("error in breakpoint singleste: %s",
+			    strerror(errno));
+			return;
+		}
+
+		int wstatus = 0;
+		if (waitpid(tracee->pid, &wstatus, 0) < 0) {
+			pr_err("waitpid err: %s", strerror(errno));
+			return;
+		}
+
+		if (!WIFSTOPPED(wstatus)) {
+			pr_err("not stopped by SIGSTOP");
+			return;
+		}
+
+		// restore the breakpoint
+		val = (bp->value & 0xFFFFFFFFFFFFFF00UL) | 0xCCUL;
+		if (ptrace(PTRACE_POKETEXT, tracee->pid, bp->addr, val) == -1) {
+			pr_err(
+			    "breakpoint_handle: error in PTRACE_POKETEXT- %s",
 			    strerror(errno));
 			return;
 		}
@@ -227,12 +254,13 @@ int main(int argc, char *argv[])
 			}
 
 			if (WIFSTOPPED(wstatus)) {
-				pr_info("tracee received signal: %s",
-				    strsignal(WSTOPSIG(wstatus)));
-
 				if (WSTOPSIG(wstatus) == SIGTRAP) {
 					// could be a breakpoint stop
 					breakpoint_handle(&global_tracee);
+				} else {
+					pr_info_raw(
+					    "tracee received signal: %s\n",
+					    strsignal(WSTOPSIG(wstatus)));
 				}
 			}
 

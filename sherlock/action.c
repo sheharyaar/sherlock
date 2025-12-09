@@ -145,6 +145,10 @@ tracee_state_e action_parse_input(tracee_t *tracee, char *input)
 	}
 
 	// break into action and entity
+	if (action[0] == '\0') {
+		return TRACEE_STOPPED;
+	}
+
 	action_e act = str_to_action(action);
 	if (act == ACTION_COUNT) {
 		pr_err("invalid action: '%s'", action);

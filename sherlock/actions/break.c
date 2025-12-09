@@ -16,11 +16,6 @@ TODO:
 - Address
 - File:line
 - Conditional ?
-
-* List of breakpoints
-* Ability to add / remove breakpoints
-* Use INT to add breakpoint -- maybe first implement it in ltrace, compare
-performance and then port to debugger.
 */
 
 static tracee_state_e breakpoint_add(
