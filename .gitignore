@@ -3,4 +3,4 @@ bin/**
 *.o
 build/
 irene/test/hello
-sherlock/test/hello
+sherlock/test/test
