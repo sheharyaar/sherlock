@@ -51,6 +51,7 @@ char *elf_get_plt_name(tracee_t *tracee, unsigned long long addr)
 	if (index >= MAX_PLT_ENTRIES) {
 		pr_err("index(%d) exceeds MAX_PLT_ENTRIES(%d)", index,
 		    MAX_PLT_ENTRIES);
+		return NULL;
 	}
 
 	return sym_name[index];
@@ -223,4 +224,33 @@ out:
 	close(fd);
 err:
 	return -1;
+}
+
+int elf_break_plt_all(tracee_t *tracee)
+{
+	for (unsigned long long i = tracee->plt_start +
+		tracee->plt_entsize; // first entry should be skipped
+	    i < tracee->plt_end; i += tracee->plt_entsize) {
+		long val = 0;
+		errno = 0;
+		val = ptrace(PTRACE_PEEKTEXT, tracee->pid, i, NULL);
+		if (val == -1 && errno != 0) {
+			pr_err("elf_break_plt_all: error in PEEKTEXT: %s",
+			    strerror(errno));
+			return -1;
+		}
+
+		pr_debug("patching address=%#llx\tval=%#lx", i, val);
+
+		val = (val & 0xffffffffffffff00UL) | 0xcc;
+		if (ptrace(PTRACE_POKETEXT, tracee->pid, i, val) == -1) {
+			pr_err("elf_break_plt_all: error in PEEKTEXT: %s",
+			    strerror(errno));
+			return -1;
+		}
+
+		pr_debug("patched val=%#lx", val);
+	}
+
+	return 0;
 }

@@ -19,27 +19,77 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define TRACEE_CONT_TRACE(mode)                                                \
-	do {                                                                   \
-		if (ptrace(mode, tracee.pid, NULL, 0) == -1) {                 \
-			pr_err("ptrace cont err: %s", strerror(errno));        \
-			goto err;                                              \
-		}                                                              \
-	} while (0)
-
 static tracee_t tracee;
 
-static void handle_plt_call(
-    tracee_t *tracee, struct user_regs_struct *regs, unsigned long long addr)
+static void handle_plt_call(tracee_t *tracee)
 {
+	// fetch RIP value
+	struct user_regs_struct regs;
+	if (ptrace(PTRACE_GETREGS, tracee->pid, NULL, &regs) == -1) {
+		pr_err("peekuser error: %s", strerror(errno));
+		return;
+	}
+
+	// check the library name associated with this addr.
+
+	unsigned long long addr = regs.rip - 1;
 	char *sym_name = elf_get_plt_name(tracee, addr);
 	if (sym_name == NULL) {
 		pr_err("elf_get_plt_name failed");
 		return;
 	}
 
-	pr_info_raw("%s(%#llx , %#llx, %#llx, %#llx)\n", sym_name, regs->rdi,
-	    regs->rsi, regs->rdx, regs->rcx);
+	pr_info_raw("%s(%#llx , %#llx, %#llx, %#llx)\n", sym_name, regs.rdi,
+	    regs.rsi, regs.rdx, regs.rcx);
+
+	// restore original val, format: cc 35 ca 2f 00 00 -> ff 35 ca 2f 00 00
+	// (in reverse due to endian order)
+	long break_val = 0;
+	errno = 0;
+	break_val = ptrace(PTRACE_PEEKTEXT, tracee->pid, addr, NULL);
+	if (break_val == -1 && errno != 0) {
+		pr_err("error in PTRACE_PEEKTEXT, could mess up tracing: %s",
+		    strerror(errno));
+		return;
+	}
+
+	long orig_val = (break_val & 0xffffffffffffff00UL) | 0xff;
+	pr_debug("break_val=%#lx, orig_val=%#lx", break_val, orig_val);
+	if (ptrace(PTRACE_POKETEXT, tracee->pid, addr, orig_val) == -1) {
+		pr_err("error in PTRACE_POKETEXT, could mess up tracing: %s",
+		    strerror(errno));
+		return;
+	}
+
+	// restore the RIP register and retrigger
+	regs.rip -= 1;
+	if (ptrace(PTRACE_SETREGS, tracee->pid, NULL, &regs) == -1) {
+		pr_err("error in setting reg for breakpoint, can mess up the "
+		       "program: %s",
+		    strerror(errno));
+		return;
+	}
+
+	// single step and restore the breakpoint
+	if (ptrace(PTRACE_SINGLESTEP, tracee->pid, NULL, NULL) == -1) {
+		pr_err("error in ptrace signlestep: %s", strerror(errno));
+		return;
+	}
+
+	// wait for singlestep
+	if (waitpid(tracee->pid, NULL, 0) < 0) {
+		pr_err("handle_plt_call waitpid err: %s", strerror(errno));
+		return;
+	}
+
+	// restore breakpoint, format: ff 35 ca 2f 00 00 -> cc 35 ca 2f 00 00
+	// (in reverse order due to endian)
+	if (ptrace(PTRACE_POKETEXT, tracee->pid, addr, break_val) == -1) {
+		pr_err("error in PTRACE_POKETEXT breakpoint data, could mess "
+		       "up tracing: %s",
+		    strerror(errno));
+		return;
+	}
 }
 
 int main(int argc, char *argv[])
@@ -56,10 +106,6 @@ int main(int argc, char *argv[])
 	}
 
 	int wstatus = 0;
-	// if using PID mode then start directly with singlestep
-	int trace_type = tracee.execd ? PTRACE_SINGLESTEP : PTRACE_SYSCALL;
-	long instr = 0;
-	struct user_regs_struct regs;
 
 	while (1) {
 		wstatus = 0;
@@ -73,16 +119,10 @@ int main(int argc, char *argv[])
 		if (!WIFSTOPPED(wstatus)) {
 			if (WIFEXITED(wstatus)) {
 				pr_info("child exited, exiting tracer");
-				return 1;
+				return 0;
 			}
 			pr_warn("tracee stopped, not by ptrace\n");
 			goto tracee_continue;
-		}
-
-		// fetch RIP value
-		if (ptrace(PTRACE_GETREGS, tracee.pid, NULL, &regs) == -1) {
-			pr_err("peekuser error: %s", strerror(errno));
-			goto err;
 		}
 
 		if (wstatus >> 8 == (SIGTRAP | (PTRACE_EVENT_EXEC << 8))) {
@@ -95,8 +135,14 @@ int main(int argc, char *argv[])
 				goto err;
 			}
 
+			// break all PLTs
+			if (elf_break_plt_all(&tracee) == -1) {
+				pr_err("adding breakpoints failed");
+				goto err;
+			}
+
 			tracee.execd = true;
-			trace_type = PTRACE_SINGLESTEP;
+			goto tracee_continue;
 		}
 
 		// the child has not yet execed, the memory maps wont be updated
@@ -104,26 +150,15 @@ int main(int argc, char *argv[])
 		if (!tracee.execd)
 			goto tracee_continue;
 
-		// fetch the instruction at the RIP. The instructions are in
-		// .text section
-		instr = ptrace(PTRACE_PEEKTEXT, tracee.pid, regs.rip, NULL);
-		if (instr == -1) {
-			pr_err("peektext error: %s", strerror(errno));
-			goto err;
-		}
-
-		// Check if the instruction is 'call'. e8 denotes to a near call
-		// with 32 bit address Check AMD64 manuals for this
-		if ((instr & 0xFF) == 0xe8) {
-			unsigned long long addr = CALL_TO_VA(regs.rip, instr);
-			// If the instruction falls within the PLT address
-			if (addr > tracee.plt_start && addr < tracee.plt_end) {
-				handle_plt_call(&tracee, &regs, addr);
-			}
+		if (WSTOPSIG(wstatus) == SIGTRAP) {
+			handle_plt_call(&tracee);
 		}
 
 	tracee_continue:
-		TRACEE_CONT_TRACE(trace_type);
+		if (ptrace(PTRACE_CONT, tracee.pid, NULL, NULL) == -1) {
+			pr_err("ptrace cont err: %s", strerror(errno));
+			goto err;
+		}
 	}
 
 	return 0;
