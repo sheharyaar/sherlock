@@ -27,20 +27,26 @@ static void handle_plt_call(tracee_t *tracee)
 	struct user_regs_struct regs;
 	if (ptrace(PTRACE_GETREGS, tracee->pid, NULL, &regs) == -1) {
 		pr_err("peekuser error: %s", strerror(errno));
-		return;
+		goto continue_trace;
 	}
 
 	// check the library name associated with this addr.
 
 	unsigned long long addr = regs.rip - 1;
-	char *sym_name = elf_get_plt_name(tracee, addr);
-	if (sym_name == NULL) {
-		pr_err("elf_get_plt_name failed");
+	if (addr < tracee->plt_start || addr > tracee->plt_end) {
+		pr_debug("probably a non PLT sigtrap");
 		return;
 	}
 
-	pr_info_raw("%s(%#llx , %#llx, %#llx, %#llx)\n", sym_name, regs.rdi,
-	    regs.rsi, regs.rdx, regs.rcx);
+	char *sym_name = elf_get_plt_name(tracee, addr);
+	if (sym_name == NULL) {
+		pr_err("elf_get_plt_name failed");
+	}
+
+continue_trace:
+	pr_info_raw("%s(%#llx , %#llx, %#llx, %#llx)\n",
+	    sym_name != NULL ? sym_name : "(\?\?)", regs.rdi, regs.rsi,
+	    regs.rdx, regs.rcx);
 
 	// restore original val, format: cc 35 ca 2f 00 00 -> ff 35 ca 2f 00 00
 	// (in reverse due to endian order)
@@ -58,7 +64,6 @@ static void handle_plt_call(tracee_t *tracee)
 	if (ptrace(PTRACE_POKETEXT, tracee->pid, addr, orig_val) == -1) {
 		pr_err("error in PTRACE_POKETEXT, could mess up tracing: %s",
 		    strerror(errno));
-		return;
 	}
 
 	// restore the RIP register and retrigger

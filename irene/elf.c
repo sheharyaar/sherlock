@@ -17,7 +17,7 @@
 #include <sys/param.h>
 
 #define PID_MAP_STR "/proc/%d/maps"
-#define MAX_PLT_ENTRIES 256
+#define MAX_PLT_ENTRIES 1500
 
 static char *sym_name[MAX_PLT_ENTRIES] = { 0 };
 
@@ -44,7 +44,7 @@ char *elf_get_plt_name(tracee_t *tracee, unsigned long long addr)
 		return NULL;
 	}
 
-	int index = (unsigned long long)(addr - tracee->plt_start) /
+	unsigned int index = (unsigned long long)(addr - tracee->plt_start) /
 		tracee->plt_entsize -
 	    1;
 
@@ -174,7 +174,8 @@ int elf_plt_init(tracee_t *tracee)
 			// lets keep the VA for now, then we will add base later
 			tracee->plt_start = hdr->sh_addr;
 			tracee->plt_end = hdr->sh_addr + hdr->sh_size;
-			tracee->plt_entsize = hdr->sh_entsize;
+			tracee->plt_entsize =
+			    hdr->sh_entsize == 0 ? 16 : hdr->sh_entsize;
 			pr_debug("relative plt_start=%#llx plt_end=%#llx "
 				 "plt_entsize=%#llx",
 			    tracee->plt_start, tracee->plt_end,
