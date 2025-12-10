@@ -59,7 +59,7 @@ continue_trace:
 		return;
 	}
 
-	long orig_val = (break_val & 0xffffffffffffff00UL) | 0xff;
+	long orig_val = (break_val & 0xffffffffffffff00UL) | tracee->bp_replace;
 	pr_debug("break_val=%#lx, orig_val=%#lx", break_val, orig_val);
 	if (ptrace(PTRACE_POKETEXT, tracee->pid, addr, orig_val) == -1) {
 		pr_err("error in PTRACE_POKETEXT, could mess up tracing: %s",
@@ -110,7 +110,12 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
+		pr_err("SIGINT ignore failed: %s", strerror(errno));
+	}
+
 	int wstatus = 0;
+	int send_signal = 0;
 
 	while (1) {
 		wstatus = 0;
@@ -123,7 +128,7 @@ int main(int argc, char *argv[])
 		// WIFSTOPPED(status) true. See manpage ptrace(2).
 		if (!WIFSTOPPED(wstatus)) {
 			if (WIFEXITED(wstatus)) {
-				pr_info("child exited, exiting tracer");
+				pr_debug("child exited, exiting tracer");
 				return 0;
 			}
 			pr_warn("tracee stopped, not by ptrace\n");
@@ -157,10 +162,15 @@ int main(int argc, char *argv[])
 
 		if (WSTOPSIG(wstatus) == SIGTRAP) {
 			handle_plt_call(&tracee);
+			send_signal = 0;
+		} else {
+			send_signal = WSTOPSIG(wstatus);
+			pr_info_raw(
+			    "--- %s received ---\n", strsignal(send_signal));
 		}
 
 	tracee_continue:
-		if (ptrace(PTRACE_CONT, tracee.pid, NULL, NULL) == -1) {
+		if (ptrace(PTRACE_CONT, tracee.pid, NULL, send_signal) == -1) {
 			pr_err("ptrace cont err: %s", strerror(errno));
 			goto err;
 		}

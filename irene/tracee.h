@@ -25,6 +25,7 @@ typedef struct TRACEE {
 	unsigned long long plt_end;
 	unsigned long long plt_entsize;
 	unsigned long long va_base;
+	unsigned long bp_replace;
 	char file_name[256];
 	pid_t pid;
 	bool execd;

@@ -19,6 +19,7 @@
 #define PID_MAP_STR "/proc/%d/maps"
 #define MAX_PLT_ENTRIES 1500
 
+static bool plt_sec_found = 0;
 static char *sym_name[MAX_PLT_ENTRIES] = { 0 };
 
 static char *get_symbol_name(
@@ -45,9 +46,14 @@ char *elf_get_plt_name(tracee_t *tracee, unsigned long long addr)
 	}
 
 	unsigned int index = (unsigned long long)(addr - tracee->plt_start) /
-		tracee->plt_entsize -
-	    1;
+	    tracee->plt_entsize;
 
+	// .plt section has the first entry with the trampoline, .plt.sec
+	// doesn't have a trampoline
+	if (!plt_sec_found)
+		index--;
+
+	pr_debug("index: %u", index);
 	if (index >= MAX_PLT_ENTRIES) {
 		pr_err("index(%d) exceeds MAX_PLT_ENTRIES(%d)", index,
 		    MAX_PLT_ENTRIES);
@@ -156,32 +162,48 @@ int elf_plt_init(tracee_t *tracee)
 			continue;
 		}
 
-		if (strncmp(".rela.plt", name, 9) == 0) {
+		if (strcmp(".rela.plt", name) == 0) {
 			rela_plt_scn = scn;
 			rela_plt_hdr = hdr;
 		}
 
-		if (strncmp(".dynsym", name, 7) == 0) {
+		if (strcmp(".dynsym", name) == 0) {
 			dynsym_scn = scn;
 			dynsym_hdr = hdr;
 		}
 
-		if (strncmp(".dynstr", name, 7) == 0) {
+		if (strcmp(".dynstr", name) == 0) {
 			dynstr_indx = elf_ndxscn(scn);
 		}
 
-		if (strncmp(".plt", name, 5) == 0) {
+		if (strcmp(".plt", name) == 0) {
+			if (!plt_sec_found) {
+				// lets keep the VA for now, then we will add
+				// base later
+				tracee->plt_start = hdr->sh_addr;
+				tracee->plt_end = hdr->sh_addr + hdr->sh_size;
+				tracee->plt_entsize = hdr->sh_entsize == 0
+				    ? hdr->sh_addralign
+				    : hdr->sh_entsize;
+			}
+		}
+
+		if (strcmp(".plt.sec", name) == 0) {
 			// lets keep the VA for now, then we will add base later
 			tracee->plt_start = hdr->sh_addr;
 			tracee->plt_end = hdr->sh_addr + hdr->sh_size;
-			tracee->plt_entsize =
-			    hdr->sh_entsize == 0 ? 16 : hdr->sh_entsize;
-			pr_debug("relative plt_start=%#llx plt_end=%#llx "
-				 "plt_entsize=%#llx",
-			    tracee->plt_start, tracee->plt_end,
-			    tracee->plt_entsize);
+			tracee->plt_entsize = hdr->sh_entsize == 0
+			    ? hdr->sh_addralign
+			    : hdr->sh_entsize;
+			plt_sec_found = true;
+			pr_debug(
+			    "'.plt.sec' found, using it instead of '.plt'");
 		}
 	}
+
+	pr_debug("relative plt_start=%#llx plt_end=%#llx "
+		 "plt_entsize=%#llx",
+	    tracee->plt_start, tracee->plt_end, tracee->plt_entsize);
 
 	if (rela_plt_scn == NULL || rela_plt_hdr == NULL ||
 	    dynsym_scn == NULL || dynsym_hdr == NULL) {
@@ -229,9 +251,11 @@ err:
 
 int elf_break_plt_all(tracee_t *tracee)
 {
-	for (unsigned long long i = tracee->plt_start +
-		tracee->plt_entsize; // first entry should be skipped
-	    i < tracee->plt_end; i += tracee->plt_entsize) {
+	unsigned long long i = tracee->plt_start;
+	if (!plt_sec_found)
+		i += tracee->plt_entsize; // skip the first entry
+
+	for (; i < tracee->plt_end; i += tracee->plt_entsize) {
 		long val = 0;
 		errno = 0;
 		val = ptrace(PTRACE_PEEKTEXT, tracee->pid, i, NULL);
@@ -241,6 +265,7 @@ int elf_break_plt_all(tracee_t *tracee)
 			return -1;
 		}
 
+		tracee->bp_replace = val & 0xffUL;
 		pr_debug("patching address=%#llx\tval=%#lx", i, val);
 
 		val = (val & 0xffffffffffffff00UL) | 0xcc;
