@@ -106,7 +106,6 @@ int main(int argc, char *argv[])
 
 	if (elf_plt_init(&tracee) < 0) {
 		pr_err("elf_plt_init failed");
-		ptrace(PTRACE_DETACH, tracee.pid, NULL, NULL);
 		exit(1);
 	}
 
@@ -178,6 +177,5 @@ int main(int argc, char *argv[])
 
 	return 0;
 err:
-	ptrace(PTRACE_DETACH, tracee.pid, NULL, NULL);
 	return 1;
 }
