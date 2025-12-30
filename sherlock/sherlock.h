@@ -14,6 +14,7 @@
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <libunwind-ptrace.h>
 
 #define SHERLOCK_MAX_STRLEN 256
 
@@ -36,6 +37,8 @@ typedef struct TRACEE {
 	pid_t pid;
 	breakpoint_t *bp;
 	unsigned long long va_base;
+	void *unw_context;
+	unw_cursor_t unw_cursor;
 	char name[SHERLOCK_MAX_STRLEN];
 	char exe_path[SHERLOCK_MAX_STRLEN];
 } tracee_t;

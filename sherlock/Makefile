@@ -7,8 +7,8 @@
 
 # Compiler and flags
 CC      := gcc
-CFLAGS  := -Wall -Wextra -g
-LDFLAGS := -lm
+CFLAGS  := -Wall -Wextra -g -I/usr/include/x86_64-linux-gnu
+LDFLAGS := -lm -lunwind-ptrace -lunwind-generic -lunwind
 
 TARGET  := sherlock
 BUILD_DIR ?= ../build

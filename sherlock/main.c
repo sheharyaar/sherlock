@@ -38,7 +38,7 @@ static tracee_t global_tracee = {
 
 static pid_t sherlock_pid = 0;
 
-void __attribute__((noreturn)) print_help_exit(int status)
+static void __attribute__((noreturn)) print_help_exit(int status)
 {
 	pr_info_raw("Usage:\n");
 	pr_info_raw("$ sudo sherlock --pid PID\n");
@@ -48,7 +48,7 @@ void __attribute__((noreturn)) print_help_exit(int status)
 	exit(status);
 }
 
-void signal_handler(int signal)
+static void signal_handler(int signal)
 {
 	if (signal == SIGINT) {
 		if (global_tracee.pid != 0) {
@@ -63,7 +63,7 @@ void signal_handler(int signal)
 
 // Sets up tracee and brings it to a stopped state.
 // Returns -1 on failure.
-int setup(int argc, char *argv[], tracee_t *tracee)
+static int setup(int argc, char *argv[], tracee_t *tracee)
 {
 	if (argc < 3)
 		print_help_exit(1);
@@ -88,6 +88,19 @@ int setup(int argc, char *argv[], tracee_t *tracee)
 
 	pr_err("invalid usage");
 	print_help_exit(1);
+}
+
+static int setup_libunwind(tracee_t *tracee)
+{
+	unw_addr_space_t addr_space = unw_create_addr_space(&_UPT_accessors, 0);
+	tracee->unw_context = _UPT_create(tracee->pid);
+	if (unw_init_remote(
+		&tracee->unw_cursor, addr_space, tracee->unw_context) != 0) {
+		pr_err("cannot initialize cursor for remote unwinding\n");
+		return -1;
+	}
+
+	return 0;
 }
 
 // TOOD: Make the brealpoint permanent
@@ -163,6 +176,11 @@ int main(int argc, char *argv[])
 {
 	if (setup(argc, argv, &global_tracee) == -1) {
 		pr_err("error in setting up the tracee");
+		return 1;
+	}
+
+	if (setup_libunwind(&global_tracee) == -1) {
+		pr_err("setting up libunwind failed");
 		return 1;
 	}
 
