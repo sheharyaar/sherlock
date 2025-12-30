@@ -11,7 +11,8 @@
 #include <signal.h>
 #include <stdio.h>
 
-static tracee_state_e kill_tracee(tracee_t *tracee, char *args)
+static tracee_state_e kill_tracee(
+    tracee_t *tracee, __attribute__((unused)) char *args)
 {
 	pr_info_raw("Do you really want to kill the tracee (Y / N): ");
 	char opt[8];

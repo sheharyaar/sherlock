@@ -10,7 +10,7 @@
 #include "../action.h"
 #include <sys/ptrace.h>
 
-static tracee_state_e run(tracee_t *tracee, char *args)
+static tracee_state_e run(tracee_t *tracee, __attribute__((unused)) char *args)
 {
 	if (ptrace(PTRACE_CONT, tracee->pid, NULL, 0) == -1) {
 		pr_err("error in ptrace: %s", strerror(errno));
