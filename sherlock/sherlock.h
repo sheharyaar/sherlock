@@ -37,6 +37,7 @@ typedef struct TRACEE {
 	breakpoint_t *bp;
 	unsigned long long va_base;
 	char name[SHERLOCK_MAX_STRLEN];
+	char exe_path[SHERLOCK_MAX_STRLEN];
 } tracee_t;
 
 int tracee_setup_pid(tracee_t *tracee, int pid);

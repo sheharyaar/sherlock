@@ -79,42 +79,11 @@ int setup(int argc, char *argv[], tracee_t *tracee)
 			return -1;
 		}
 
-		tracee->pid = pid;
 		return tracee_setup_pid(tracee, pid);
 	}
 
 	if (strncmp("--exec", argv[1], 6) == 0) {
-		if (tracee_setup_exec(tracee, &argv[2]) == -1) {
-			pr_err("error in tracee_setup_exec");
-			return -1;
-		}
-
-		// let the child exec and wait for it
-		if (ptrace(PTRACE_CONT, tracee->pid, NULL, NULL) == -1) {
-			pr_err("ptrace conntinue for child failed");
-			goto err;
-		}
-
-		int wstatus = 0;
-		if (waitpid(tracee->pid, &wstatus, 0) < 0) {
-			pr_err("waitpid err: %s", strerror(errno));
-			goto err;
-		}
-
-		if (wstatus >> 8 == (SIGTRAP | (PTRACE_EVENT_EXEC << 8))) {
-			pr_debug("child execed");
-			// fetch the memory map base
-			if (elf_mem_va_base(tracee) < 0) {
-				pr_err("could not get tracee memory VA base "
-				       "address, trace failed");
-				goto err;
-			}
-		}
-
-		return 0;
-	err:
-		kill(tracee->pid, SIGKILL);
-		return -1;
+		return tracee_setup_exec(tracee, &argv[2]);
 	}
 
 	pr_err("invalid usage");

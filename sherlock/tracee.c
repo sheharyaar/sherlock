@@ -6,7 +6,7 @@
  *
  * This file is licensed under the MIT License.
  */
-
+#define _XOPEN_SOURCE 700
 #include "sherlock.h"
 #include <asm-generic/errno-base.h>
 #include <errno.h>
@@ -17,19 +17,20 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define PROC_CMDLINE "/proc/%d/cmdline"
+#define PROC_COMM "/proc/%d/comm"
+#define PROC_EXE "/proc/%d/exe"
 
 // Reads the /proc/<PID>/cmdline file and sets the tracee executable name.
 // Returns -1 on error.
-static int get_pid_cmdline(tracee_t *tracee, int pid)
+static int get_pid_cmdline(tracee_t *tracee)
 {
 	// get the name of the file
 	char name[SHERLOCK_MAX_STRLEN];
 	char cmdline_file[SHERLOCK_MAX_STRLEN];
 	FILE *cmdline_f = NULL;
 
-	if (snprintf(cmdline_file, SHERLOCK_MAX_STRLEN, PROC_CMDLINE, pid) <
-	    0) {
+	if (snprintf(cmdline_file, SHERLOCK_MAX_STRLEN, PROC_COMM,
+		tracee->pid) < 0) {
 		pr_err("snprint failed: %s", strerror(errno));
 		return -1;
 	}
@@ -44,7 +45,7 @@ static int get_pid_cmdline(tracee_t *tracee, int pid)
 		if (errno == ENOMEM) {
 			pr_warn("a possible reason can be that the "
 				"/proc/%d/cmdline is more than %d bytes",
-			    pid, SHERLOCK_MAX_STRLEN);
+			    tracee->pid, SHERLOCK_MAX_STRLEN);
 		}
 		fclose(cmdline_f);
 		return -1;
@@ -54,6 +55,29 @@ static int get_pid_cmdline(tracee_t *tracee, int pid)
 	tracee->name[SHERLOCK_MAX_STRLEN - 1] = '\0';
 
 	fclose(cmdline_f);
+	return 0;
+}
+
+// Reads the /proc/<PID>/exe link and sets the tracee executable path.
+// Returns -1 on error.
+static int get_pid_exe_name(tracee_t *tracee)
+{
+	// get the name of the file
+	char exe_link_file[SHERLOCK_MAX_STRLEN];
+
+	if (snprintf(exe_link_file, SHERLOCK_MAX_STRLEN, PROC_EXE,
+		tracee->pid) < 0) {
+		pr_err("snprint failed: %s", strerror(errno));
+		return -1;
+	}
+
+	if (readlink(exe_link_file, tracee->exe_path,
+		SHERLOCK_MAX_STRLEN - 1) == -1) {
+		pr_err("readlink failed: %s", strerror(errno));
+		return -1;
+	}
+
+	tracee->exe_path[SHERLOCK_MAX_STRLEN - 1] = '\0';
 	return 0;
 }
 
@@ -92,27 +116,38 @@ err:
 	return -1;
 }
 
+static int get_pid_info(tracee_t *tracee)
+{
+	// get the cmdline name of the process
+	if (get_pid_cmdline(tracee) == -1) {
+		pr_err("error in get_pid_cmdline");
+		return -1;
+	}
+	pr_debug("pid cmdline: %s", tracee->name);
+
+	if (get_pid_exe_name(tracee) == -1) {
+		pr_err("error in get_pid_exe_name");
+		return -1;
+	}
+	pr_debug("pid exe name: %s", tracee->exe_path);
+	return 0;
+}
+
 // Attaches the debugger to the process with PID and sets the fields of the
 // tracee. The tracee will be in stopped state, you can perform other oeprations
 // and then you need to 'continue' the process.
 // Returns -1 on error.
 int tracee_setup_pid(tracee_t *tracee, int pid)
 {
-	// get the cmdline name of the process
-	if (get_pid_cmdline(tracee, pid) == -1) {
-		pr_err("error in get_pid_cmdline");
+	tracee->pid = pid;
+	if (get_pid_info(tracee) == -1) {
+		pr_err("tracee_setup_pid: get_pid_info failed");
 		return -1;
 	}
-	pr_debug("pid cmdline: %s", tracee->name);
 
 	// attach to the program, the tracee should be left in the stopped
 	// state, since the program is already running, unlike the exec case
-	if (attach_and_stop(tracee, false) == -1) {
-		pr_err("attach_and_start failed");
-		return -1;
-	}
-
-	return 0;
+	return attach_and_stop(tracee, false);
 }
 
 // Execs the program andd attaches the deubgger to it. Sets the fields of the
@@ -166,8 +201,6 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[])
 	}
 
 	tracee->pid = cpid;
-	strncpy(tracee->name, argv[0], SHERLOCK_MAX_STRLEN);
-	tracee->name[SHERLOCK_MAX_STRLEN - 1] = '\0';
 
 	// close read end of the pipe for parent
 	close(pipefd[0]);
@@ -181,6 +214,33 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[])
 	if (write(pipefd[1], &flag, sizeof(int)) == -1) {
 		pr_err("error in parent write: %s", strerror(errno));
 		goto parent_err;
+	}
+
+	// let the child exec and wait for it
+	if (ptrace(PTRACE_CONT, tracee->pid, NULL, NULL) == -1) {
+		pr_err("ptrace conntinue for child failed");
+		goto parent_err;
+	}
+
+	int wstatus = 0;
+	if (waitpid(tracee->pid, &wstatus, 0) < 0) {
+		pr_err("waitpid err: %s", strerror(errno));
+		goto parent_err;
+	}
+
+	if (wstatus >> 8 == (SIGTRAP | (PTRACE_EVENT_EXEC << 8))) {
+		pr_debug("child execed");
+		// fetch the memory map base
+		if (elf_mem_va_base(tracee) < 0) {
+			pr_err("could not get tracee memory VA base "
+			       "address, trace failed");
+			goto parent_err;
+		}
+
+		if (get_pid_info(tracee) == -1) {
+			pr_err("tracee_setup_exec: get_pid_info failed");
+			goto parent_err;
+		}
 	}
 
 	return 0;
