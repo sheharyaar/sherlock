@@ -92,10 +92,10 @@ static int setup(int argc, char *argv[], tracee_t *tracee)
 
 static int setup_libunwind(tracee_t *tracee)
 {
-	unw_addr_space_t addr_space = unw_create_addr_space(&_UPT_accessors, 0);
+	tracee->unw_addr = unw_create_addr_space(&_UPT_accessors, 0);
 	tracee->unw_context = _UPT_create(tracee->pid);
-	if (unw_init_remote(
-		&tracee->unw_cursor, addr_space, tracee->unw_context) != 0) {
+	if (unw_init_remote(&tracee->unw_cursor, tracee->unw_addr,
+		tracee->unw_context) != 0) {
 		pr_err("cannot initialize cursor for remote unwinding\n");
 		return -1;
 	}
@@ -184,16 +184,21 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	if (elf_setup_syms(&global_tracee) == -1) {
+		pr_err("elf symbol parsing failed");
+		goto cleanup_unw;
+	}
+
 	sherlock_pid = getpid();
 
 	if (signal(SIGINT, signal_handler) == SIG_ERR) {
 		pr_err("error in signal(SIGINT): %s", strerror(errno));
-		return 1;
+		goto cleanup_unw;
 	}
 
 	if (signal(SIGTERM, signal_handler) == SIG_ERR) {
 		pr_err("error in signal(SIGTERM): %s", strerror(errno));
-		return 1;
+		goto cleanup_unw;
 	}
 
 	// TODO: Fix pgid and tty ownership
@@ -222,12 +227,12 @@ int main(int argc, char *argv[])
 		state = action_parse_input(&global_tracee, input);
 		if (state == TRACEE_ERR) {
 			pr_err("critical error, killing debugger");
-			return 1;
+			goto cleanup_unw;
 		}
 
 		if (state == TRACEE_KILLED) {
 			pr_info("the tracee has been killed, exiting debugger");
-			return 0;
+			goto cleanup_unw;
 		}
 
 #if DEBUG
@@ -237,7 +242,7 @@ int main(int argc, char *argv[])
 		if (state == TRACEE_RUNNING) {
 			if (waitpid(global_tracee.pid, &wstatus, 0) < 0) {
 				pr_err("waitpid err: %s", strerror(errno));
-				return 1;
+				goto cleanup_unw;
 			}
 
 			if (WIFSTOPPED(wstatus)) {
@@ -256,4 +261,9 @@ int main(int argc, char *argv[])
 	}
 
 	return 0;
+
+cleanup_unw:
+	unw_destroy_addr_space(global_tracee.unw_addr);
+	_UPT_destroy(global_tracee.unw_context);
+	return 1;
 }

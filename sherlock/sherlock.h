@@ -37,6 +37,7 @@ typedef struct TRACEE {
 	pid_t pid;
 	breakpoint_t *bp;
 	unsigned long long va_base;
+	unw_addr_space_t unw_addr;
 	void *unw_context;
 	unw_cursor_t unw_cursor;
 	char name[SHERLOCK_MAX_STRLEN];
@@ -46,6 +47,7 @@ typedef struct TRACEE {
 int tracee_setup_pid(tracee_t *tracee, int pid);
 int tracee_setup_exec(tracee_t *tracee, char *argv[]);
 
+int elf_setup_syms(tracee_t *tracee);
 int elf_mem_va_base(tracee_t *tracee);
 
 #endif
