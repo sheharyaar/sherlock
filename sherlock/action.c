@@ -19,7 +19,7 @@ static const char *entity_str[ENTITY_COUNT] = {
 	[ENTITY_VARIABLE] = "var",
 	[ENTITY_ADDRESS] = "addr",
 	[ENTITY_LINE] = "line",
-	[ENTITY_FILE_LINE] = "file:line",
+	[ENTITY_FILE_LINE] = "fline",
 	[ENTITY_REGISTER] = "reg",
 	[ENTITY_BREAKPOINT] = "break",
 	[ENTITY_NONE] = "<none>",
@@ -53,8 +53,7 @@ static entity_e str_to_entity(char *ent_str)
 	}
 
 	for (int ent = 0; ent < ENTITY_NONE; ent++) {
-		if (strncmp(ent_str, entity_str[ent],
-			fmax(strlen(entity_str[ent]), strlen(ent_str))) == 0) {
+		if (strcmp(ent_str, entity_str[ent]) == 0) {
 			return ent;
 		}
 	}

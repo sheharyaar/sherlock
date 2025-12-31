@@ -68,11 +68,11 @@ static int setup(int argc, char *argv[], tracee_t *tracee)
 	if (argc < 3)
 		print_help_exit(1);
 
-	if (strncmp("--help", argv[1], 6) == 0) {
+	if (strcmp("--help", argv[1]) == 0) {
 		print_help_exit(0);
 	}
 
-	if (strncmp("--pid", argv[1], 5) == 0) {
+	if (strcmp("--pid", argv[1]) == 0) {
 		int pid = atoi(argv[2]);
 		if (pid == 0 || pid < 0) {
 			pr_err("invalid PID passed");
@@ -82,7 +82,7 @@ static int setup(int argc, char *argv[], tracee_t *tracee)
 		return tracee_setup_pid(tracee, pid);
 	}
 
-	if (strncmp("--exec", argv[1], 6) == 0) {
+	if (strcmp("--exec", argv[1]) == 0) {
 		return tracee_setup_exec(tracee, &argv[2]);
 	}
 

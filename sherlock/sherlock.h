@@ -58,5 +58,6 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[]);
 
 int elf_setup_syms(tracee_t *tracee);
 int elf_mem_va_base(tracee_t *tracee);
+int elf_sym_lookup(char *name, symbol_t ***sym_list);
 
 #endif

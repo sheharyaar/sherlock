@@ -124,7 +124,6 @@ static int handle_rela(Elf *elf, Elf_Scn *scn, Elf64_Shdr *hdr)
 		const char *name =
 		    elf_strptr(elf, symtab_shdr.sh_link, sym.st_name);
 
-		// TODO: add to symbol list
 		symbol_t *s = calloc(1, sizeof(*s));
 		if (!s) {
 			pr_err("calloc for sym failed: %s", strerror(errno));
@@ -182,7 +181,6 @@ static int handle_symtab(
 			const char *name =
 			    elf_strptr(elf, strtab_idx, sym.st_name);
 
-			// TODO: add to symbol list
 			symbol_t *s = calloc(1, sizeof(*s));
 			if (!s) {
 				pr_err("calloc for sym failed: %s",
@@ -265,4 +263,29 @@ out:
 	close(fd);
 err:
 	return -1;
+}
+
+int elf_sym_lookup(char *name, symbol_t ***sym_list)
+{
+	symbol_t *s = sherlock_symtab;
+	symbol_t **s_list = NULL;
+	int count = 0;
+	while (s != NULL) {
+		if (strcmp(s->name, name) == 0) {
+			s_list =
+			    realloc(s_list, (count + 1) * sizeof(symbol_t *));
+			if (!s_list) {
+				pr_err("error in realloc: %s", strerror(errno));
+				free(s_list);
+				return -1;
+			}
+			// dont need count - 1 as count is incremented later
+			s_list[count] = s;
+			count++;
+		}
+		s = s->next;
+	}
+
+	*sym_list = s_list;
+	return count;
 }
