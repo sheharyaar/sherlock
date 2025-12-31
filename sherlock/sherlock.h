@@ -44,6 +44,15 @@ typedef struct TRACEE {
 	char exe_path[SHERLOCK_MAX_STRLEN];
 } tracee_t;
 
+typedef struct SYMBOL {
+	// addr = va_base + rel_addr
+	unsigned long long addr;
+	// if base == 0, then the symbol is dynamic and not yet loaded
+	unsigned long long base;
+	const char *name;
+	struct SYMBOL *next;
+} symbol_t;
+
 int tracee_setup_pid(tracee_t *tracee, int pid);
 int tracee_setup_exec(tracee_t *tracee, char *argv[]);
 

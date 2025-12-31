@@ -230,15 +230,16 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[])
 
 	if (wstatus >> 8 == (SIGTRAP | (PTRACE_EVENT_EXEC << 8))) {
 		pr_debug("child execed");
+
+		if (get_pid_info(tracee) == -1) {
+			pr_err("tracee_setup_exec: get_pid_info failed");
+			goto parent_err;
+		}
+
 		// fetch the memory map base
 		if (elf_mem_va_base(tracee) < 0) {
 			pr_err("could not get tracee memory VA base "
 			       "address, trace failed");
-			goto parent_err;
-		}
-
-		if (get_pid_info(tracee) == -1) {
-			pr_err("tracee_setup_exec: get_pid_info failed");
 			goto parent_err;
 		}
 	}

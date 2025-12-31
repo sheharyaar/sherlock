@@ -36,7 +36,6 @@
 #define pr_info_raw(fmt, ...) fprintf(stdout, fmt, ##__VA_ARGS__)
 #define pr_warn(fmt, ...) fprintf(stderr, PREFIX_WARN fmt "\n", ##__VA_ARGS__)
 
-#define DEBUG 1
 #if DEBUG
 #define pr_debug(fmt, ...) fprintf(stdout, PREFIX_DEBUG fmt "\n", ##__VA_ARGS__)
 #else

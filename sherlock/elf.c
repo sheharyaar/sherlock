@@ -11,10 +11,14 @@
 #include <string.h>
 #include <errno.h>
 #include <libelf.h>
+#include <gelf.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #define PROC_MAPS "/proc/%d/maps"
+
+static symbol_t *sherlock_symtab = NULL;
 
 // Sets the base virtual address of the tracee using proc/<pid>/maps file.
 // Returns -1 on failure.
@@ -35,16 +39,167 @@ int elf_mem_va_base(tracee_t *tracee)
 		return -1;
 	}
 
-	unsigned long long start = 0, end = 0;
-	if (fscanf(proc_maps_f, "%64llx-%64llx ", &start, &end) == EOF) {
-		pr_err("error in fscanf: %s", strerror(ferror(proc_maps_f)));
-		fclose(proc_maps_f);
+	char line[512];
+	while (fgets(line, sizeof(line), proc_maps_f)) {
+		unsigned long long start, end, offset;
+		char perms[5];
+		char dev[16];
+		unsigned long inode;
+		char path[256] = { 0 };
+
+		int n = sscanf(line, "%llx-%llx %4s %llx %15s %lu %255[^\n]",
+		    &start, &end, perms, &offset, dev, &inode, path);
+
+		pr_debug("maps: %llx-%llx perms=%s offset=0x%llx dev=%s "
+			 "inode=%lu path='%s'",
+		    start, end, perms, offset, dev, inode,
+		    (n == 7) ? path : "<none>");
+
+		if (n < 6)
+			continue;
+
+		if (offset != 0)
+			continue;
+
+		if (strcmp(path, tracee->exe_path) != 0)
+			continue;
+
+		tracee->va_base = start;
+		break;
+	}
+
+	pr_debug("start address=%#llx", tracee->va_base);
+	fclose(proc_maps_f);
+	return 0;
+}
+
+static int handle_rela(Elf *elf, Elf_Scn *scn, Elf64_Shdr *hdr)
+{
+	// consider only non-dynamically linked functions, i.e,
+	// offset != 0, type == FUNC, indx != UND
+	unsigned long symtab_idx = hdr->sh_link;
+	if (symtab_idx == 0) {
+		pr_err("invalid string table for rela section");
 		return -1;
 	}
 
-	tracee->va_base = start;
-	pr_debug("start address=%#llx", tracee->va_base);
-	fclose(proc_maps_f);
+	Elf_Scn *symtab_scn = elf_getscn(elf, hdr->sh_link);
+	if (symtab_scn == NULL) {
+		pr_err("failed to get dynsym section");
+		return -1;
+	}
+
+	GElf_Shdr symtab_shdr;
+	if (gelf_getshdr(symtab_scn, &symtab_shdr) == NULL) {
+		pr_err("error in getching dynsym header");
+		return -1;
+	}
+
+	Elf_Data *rela_data = elf_getdata(scn, NULL);
+	Elf_Data *sym_data = elf_getdata(symtab_scn, NULL);
+	size_t rela_count = hdr->sh_size / hdr->sh_entsize;
+
+	for (size_t i = 0; i < rela_count; i++) {
+		GElf_Rela rela;
+		if (gelf_getrela(rela_data, i, &rela) == NULL) {
+			pr_err("error in getting symbol from symtab at "
+			       "index %ld",
+			    i);
+			return -1;
+		}
+
+		// only consider jump slots
+		if (GELF_R_TYPE(rela.r_info) != R_X86_64_JUMP_SLOT) {
+			continue;
+		}
+
+		// fetch the symbol
+		GElf_Sym sym;
+		if (gelf_getsym(sym_data, GELF_R_SYM(rela.r_info), &sym) ==
+		    NULL) {
+			pr_err("error in fetching symbol for the rela entry");
+			return -1;
+		}
+
+		const char *name =
+		    elf_strptr(elf, symtab_shdr.sh_link, sym.st_name);
+
+		// TODO: add to symbol list
+		symbol_t *s = calloc(1, sizeof(*s));
+		if (!s) {
+			pr_err("calloc for sym failed: %s", strerror(errno));
+			return -1;
+		}
+
+		s->base = 0;
+		// TODO: do I need ot handle addend ?
+		s->addr = s->base + rela.r_offset;
+		s->name = name;
+		s->next = sherlock_symtab;
+		sherlock_symtab = s;
+		pr_debug("[symbol] name=%s, addr=%#llx, base=%#llx", s->name,
+		    s->addr, s->base);
+	}
+
+	return 0;
+}
+
+static int handle_symtab(
+    tracee_t *tracee, Elf *elf, Elf_Scn *scn, Elf64_Shdr *hdr)
+{
+	// consider only non-dynamically linked functions, i.e,
+	// offset != 0, type == FUNC, indx != UND
+	unsigned long strtab_idx = hdr->sh_link;
+	if (strtab_idx == 0) {
+		pr_err("invalid string table for symtab section");
+		return -1;
+	}
+
+	Elf_Data *data = NULL;
+	while ((data = elf_getdata(scn, data)) != NULL) {
+		size_t count = hdr->sh_size / hdr->sh_entsize;
+
+		for (size_t i = 0; i < count; i++) {
+			GElf_Sym sym;
+			if (gelf_getsym(data, i, &sym) == NULL) {
+				pr_err("error in getting symbol from symtab at "
+				       "index %ld",
+				    i);
+				return -1;
+			}
+
+			if (GELF_ST_TYPE(sym.st_info) != STT_FUNC ||
+			    sym.st_shndx == SHN_UNDEF || sym.st_value == 0) {
+				continue;
+			}
+
+			// consider only local and global bindings
+			if (GELF_ST_BIND(sym.st_info) != STB_GLOBAL &&
+			    GELF_ST_BIND(sym.st_info) != STB_LOCAL) {
+				continue;
+			}
+
+			const char *name =
+			    elf_strptr(elf, strtab_idx, sym.st_name);
+
+			// TODO: add to symbol list
+			symbol_t *s = calloc(1, sizeof(*s));
+			if (!s) {
+				pr_err("calloc for sym failed: %s",
+				    strerror(errno));
+				return -1;
+			}
+
+			s->base = tracee->va_base;
+			s->addr = s->base + sym.st_value;
+			s->name = name;
+			s->next = sherlock_symtab;
+			sherlock_symtab = s;
+			pr_debug("[symbol] name=%s, addr=%#llx, base=%#llx",
+			    s->name, s->addr, s->base);
+		}
+	}
+
 	return 0;
 }
 
@@ -79,14 +234,26 @@ int elf_setup_syms(tracee_t *tracee)
 			continue;
 		}
 
-		// TODO:
 		// iterate over RELA, for each RELA entry check the symtab
 		// (hdr->link) and the corresponding strtab for symbol name
 		// (symtab_hdr->link)
+		if (hdr->sh_type == SHT_RELA) {
+			pr_debug("handling rela");
+			if (handle_rela(elf, scn, hdr) == -1) {
+				pr_err("handling symtab failed");
+				goto elf_out;
+			}
+		}
 
 		// iterate over SYMTAB entries, then check for the strtab
-		// (hdr->link) for name. only consider type FUNC, with
-		// GLOBAL/LOCAL
+		// (hdr->link) for string table index.
+		if (hdr->sh_type == SHT_SYMTAB) {
+			pr_debug("handling symtab");
+			if (handle_symtab(tracee, elf, scn, hdr) == -1) {
+				pr_err("handling symtab failed");
+				goto elf_out;
+			}
+		}
 	}
 
 	// cant use elf_end here as the string pointers are in use.
