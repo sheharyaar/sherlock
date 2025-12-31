@@ -13,19 +13,17 @@ A simple debugger using `ptrace` and other required techniques to debug Linux pr
   - [ ] Ability to encapsulate/hide the internal breakpoint handling from the user (when the user prints the address of the breakpoint, it should show the original instruction, not the INT instruction).
   - [X] Support temporary and permanent breakpoints.
 - Implement debugger symbol support for variables and functions.
-  - [ ] Support for PLT symbols.
-  - [ ] Support for local variables.
-  - [ ] Support for function arguments.
+  - [ ] Support for functions (DSO and non-DSO).
+  - [ ] Support for local variables (watchpoint debugging).
+  - [ ] Support for function arguments printing.
 - Implement stack unwinding / backtrace support.
-  - [ ] Look into eh_frame and debug_frame sections for DWARF info.
-- Implement watchpoints using hardware breakpoints.
-  - [ ] Software Watchpoints
+  - [X] Look into eh_frame and debug_frame sections for DWARF info.
+  - [ ] Implement own backtracer using `eh_frame`
 
 Additional nice to haves:
 - [ ] hex, binary and string printing
 - [ ] relative addressing modes (with file base, instruction pointer) when using commands like print
 - [ ] source level debugging
-- [ ] Core dump analysis
 - [ ] Disassembled view
 
 ### Notes
