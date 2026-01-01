@@ -19,27 +19,41 @@ A simple debugger using `ptrace` and other required techniques to debug Linux pr
   - [ ] Support for function arguments printing.
 - Implement stack unwinding / backtrace support.
   - [X] Look into eh_frame and debug_frame sections for DWARF info.
-  - [ ] Implement own backtracer using `eh_frame`
 
-Additional nice to haves:
+### Notes
+
+This project brought a lot of insights into how debuggers like GDB work under the hood. I became aware of some techniques used by debuggers to boost perfformance, like setting breakpoints by replacing instructions with INT instructions, using `/proc/<pid>/mem` for reading/writing memory, etc.
+
+> A bit detailed blog post about the internals of this project is coming soon.
+
+### Pending Features (Not to be implemented / Nice to haves)
+
+Not to be implemented:
+- OS other than Linux.
+- Architectures other than x86_64.
+
+Nice to haves:
+- [ ] Implement own backtracer using `eh_frame`
 - [ ] Ability to encapsulate/hide the internal breakpoint handling from the user (when the user prints the address of the breakpoint, it should show the original instruction, not the INT instruction).
 - [ ] hex, binary and string printing
 - [ ] relative addressing modes (with file base, instruction pointer) when using commands like print
 - [ ] source level debugging
 - [ ] Disassembled view
 
-### Notes
-
-<TODO>
-
-### Pending Features (Not to be implemented)
-
-<TODO>
-
 ### Build and Run
 
-<TODO>
+- Normal mode: `make`
+- Debug mode: `make DEBUG=1`
+
+The binary will be created under the `build/` directory in the project root.
+- Usage from curent directory: `../build/sherlock --exec <program> [args...]`
+- For already running process: `sudo ../build/sherlock --pid <pid>`
 
 ### Resources
 
-<TODO>
+- [Notes on Hardware Breakpoints and Watchpoints](https://aarzilli.github.io/debugger-bibliography/hwbreak.html)
+- [GDB Wiki: Breakpoint Handling](https://sourceware.org/gdb/wiki/Internals/Breakpoint%20Handling)
+- [An Introduction to Stack Unwinding and Exception Handling](https://www.zyma.me/post/stack-unwind-intro/)
+- [Exception frames - Linux Refspec](https://refspecs.linuxfoundation.org/LSB_3.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html)
+- [How the GDB debugger and other tools use call frame information to determine the active function calls](https://opensource.com/article/23/3/gdb-debugger-call-frame-active-function-calls?extIdCarryOver=true&sc_cid=RHCTG0180000382541)
+- [Frame pointers: Untangling the unwinding](https://developers.redhat.com/articles/2023/07/31/frame-pointers-untangling-unwinding#)

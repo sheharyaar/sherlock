@@ -1,5 +1,8 @@
 # Sherlock Project
 
+> [!WARNING]
+> This project is not to be used in production environments. It is intended for educational purposes only. It is my personal project to learn about system programming, tracing, and debugging on Linux x86_64 systems.
+
 > This project was **not** build using any LLMs. Only the Makefile and some parts of the README.md were generated using LLMs.
 
 The purpose of this project is to create a suite of tracing and debugging tools for Linux x86_64 systems. The tools are inspired by popular existing tools like `strace`, `ltrace`, and `gdb`, but are implemented from scratch to provide a deeper understanding of how these tools work under the hood.
@@ -12,8 +15,6 @@ This repository contains source code for the following tracers:
 3. `sherlock`: A debugger for Linux x86_64, inspired by `gdb`.
 
 For notes and other information, please open the individual directories, which contain their own `README.md` files.
-
-> Note: At this point only `watson` and `irene` are functional. `sherlock` is still under development.
 
 ## Build
 
