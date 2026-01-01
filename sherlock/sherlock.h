@@ -29,6 +29,7 @@ typedef enum {
 typedef struct BREAKPOINT {
 	unsigned long long addr;
 	long value;
+	char *name;
 	struct BREAKPOINT *next;
 	unsigned int idx;
 } breakpoint_t;
@@ -61,4 +62,3 @@ int elf_mem_va_base(tracee_t *tracee);
 int elf_sym_lookup(char *name, symbol_t ***sym_list);
 
 #endif
-

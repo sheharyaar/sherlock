@@ -14,6 +14,7 @@ A simple debugger using `ptrace` and other required techniques to debug Linux pr
   - [X] Support temporary and permanent breakpoints.
 - Implement debugger symbol support for variables and functions.
   - [ ] Support for functions (DSO and non-DSO).
+    - [ ] Test local functions with same name in different files.
   - [ ] Support for local variables (watchpoint debugging).
   - [ ] Support for function arguments printing.
 - Implement stack unwinding / backtrace support.

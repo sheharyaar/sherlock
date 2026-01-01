@@ -17,8 +17,9 @@
 #include <math.h>
 
 // Not using strncmp here, as I want to match the complete string, not the pref
-#define MATCH_STR(str_var, str)                                                \
-	strcmp(str_var, #str) == 0
+#define MATCH_STR(str_var, str) strcmp(str_var, #str) == 0
+
+#define UNKNOWN_ADDR_STR "??"
 
 typedef enum ENTITY_E {
 	ENTITY_FUNCTION,

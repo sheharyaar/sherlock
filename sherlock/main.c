@@ -126,7 +126,13 @@ static void breakpoint_handle(tracee_t *tracee)
 
 	// replace the change text and reset the rip
 	if (found) {
-		pr_info_raw("Breakpoint %d, %#llx\n", bp->idx, bp->addr);
+		if (bp->name != NULL) {
+			pr_info_raw("Breakpoint %d, '%s' at %#llx\n", bp->idx,
+			    bp->name, bp->addr);
+		} else {
+			pr_info_raw(
+			    "Breakpoint %d, %#llx\n", bp->idx, bp->addr);
+		}
 		unsigned long val = bp->value;
 		if (ptrace(PTRACE_POKETEXT, tracee->pid, bp->addr, val) == -1) {
 			pr_err("breakpoint_handle: ptrace POKETEXT err - %s",
