@@ -10,10 +10,10 @@ A simple debugger using `ptrace` and other required techniques to debug Linux pr
   - [X] Used strtok for basic parsing.
 - Implement breakpoint support using INT.
   - [X] Basic breakpoint setting and listing -- works once per breakpoint command (like temporary breakpoints).
-  - [ ] Ability to encapsulate/hide the internal breakpoint handling from the user (when the user prints the address of the breakpoint, it should show the original instruction, not the INT instruction).
   - [X] Support temporary and permanent breakpoints.
 - Implement debugger symbol support for variables and functions.
   - [ ] Support for functions (DSO and non-DSO).
+    - [ ] GCC renames the conflicting functions with suffixes, so demangle these.
     - [ ] Test local functions with same name in different files.
   - [ ] Support for local variables (watchpoint debugging).
   - [ ] Support for function arguments printing.
@@ -22,6 +22,7 @@ A simple debugger using `ptrace` and other required techniques to debug Linux pr
   - [ ] Implement own backtracer using `eh_frame`
 
 Additional nice to haves:
+- [ ] Ability to encapsulate/hide the internal breakpoint handling from the user (when the user prints the address of the breakpoint, it should show the original instruction, not the INT instruction).
 - [ ] hex, binary and string printing
 - [ ] relative addressing modes (with file base, instruction pointer) when using commands like print
 - [ ] source level debugging
