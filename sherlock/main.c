@@ -126,9 +126,11 @@ static void breakpoint_handle(tracee_t *tracee)
 
 	// replace the change text and reset the rip
 	if (found) {
-		if (bp->name != NULL) {
-			pr_info_raw("Breakpoint %d, '%s' at %#llx\n", bp->idx,
-			    bp->name, bp->addr);
+		if (bp->sym != NULL) {
+			symbol_t *sym = bp->sym;
+			pr_info_raw("Breakpoint %d, '%s' at %#llx in %s\n",
+			    bp->idx, sym->name, sym->addr,
+			    sym->file_name == NULL ? "??" : sym->file_name);
 		} else {
 			pr_info_raw(
 			    "Breakpoint %d, %#llx\n", bp->idx, bp->addr);

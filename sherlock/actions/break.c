@@ -17,7 +17,7 @@ TODO:
 */
 
 static tracee_state_e breakpoint_add(tracee_t *tracee,
-    unsigned long long bpaddr, unsigned long bpvalue, char *name)
+    unsigned long long bpaddr, unsigned long bpvalue, symbol_t *sym)
 {
 	breakpoint_t *bp = (breakpoint_t *)calloc(1, sizeof(breakpoint_t));
 	if (bp == NULL) {
@@ -28,7 +28,7 @@ static tracee_state_e breakpoint_add(tracee_t *tracee,
 	bp->addr = bpaddr;
 	bp->value = bpvalue;
 	bp->idx = 0;
-	bp->name = name;
+	bp->sym = sym;
 	if (tracee->bp) {
 		bp->idx = tracee->bp->idx + 1;
 	}
@@ -47,7 +47,7 @@ static tracee_state_e breakpoint_add(tracee_t *tracee,
 }
 
 static tracee_state_e __breakpoint_addr(
-    tracee_t *tracee, unsigned long long bpaddr, char *name)
+    tracee_t *tracee, unsigned long long bpaddr, symbol_t *sym)
 {
 
 	long data = ptrace(PTRACE_PEEKTEXT, tracee->pid, bpaddr, NULL);
@@ -67,7 +67,7 @@ static tracee_state_e __breakpoint_addr(
 	}
 
 	pr_debug("instruction at address(%#llx): %#lx", bpaddr, (data & 0xFF));
-	return breakpoint_add(tracee, bpaddr, data, name);
+	return breakpoint_add(tracee, bpaddr, data, sym);
 }
 
 static tracee_state_e breakpoint_addr(tracee_t *tracee, char *addr)
@@ -81,7 +81,7 @@ static tracee_state_e breakpoint_addr(tracee_t *tracee, char *addr)
 	}
 
 	pr_debug("breaking address: %#llx", bpaddr);
-	return __breakpoint_addr(tracee, bpaddr, UNKNOWN_ADDR_STR);
+	return __breakpoint_addr(tracee, bpaddr, NULL);
 }
 
 static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
@@ -89,7 +89,7 @@ static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
 	// do a symbol lookup;
 	unsigned long long func_addr = 0;
 	symbol_t **sym_list = NULL;
-	char *name = NULL;
+	symbol_t *sym = NULL;
 
 	int count = elf_sym_lookup(func, &sym_list);
 	if (count == -1) {
@@ -98,10 +98,8 @@ static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
 	}
 
 	if (count == 1) {
-		func_addr = sym_list[0]->addr;
-		name = sym_list[0]->name;
-		free(sym_list);
-		return __breakpoint_addr(tracee, func_addr, name);
+		sym = sym_list[0];
+		goto call_add;
 	}
 
 	pr_info_raw("The function matches the following symbols:\n");
@@ -119,10 +117,12 @@ static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
 		return TRACEE_STOPPED;
 	}
 
-	func_addr = sym_list[input]->addr;
-	name = sym_list[input]->name;
+	sym = sym_list[input];
+
+call_add:
+	func_addr = sym->addr;
 	free(sym_list);
-	return __breakpoint_addr(tracee, func_addr, name);
+	return __breakpoint_addr(tracee, func_addr, sym);
 }
 
 static bool match_break(char *act)

@@ -26,10 +26,20 @@ typedef enum {
 	TRACEE_ERR
 } tracee_state_e;
 
+typedef struct SYMBOL {
+	// addr = va_base + rel_addr
+	unsigned long long addr;
+	// if base == 0, then the symbol is dynamic and not yet loaded
+	unsigned long long base;
+	const char *name;
+	const char *file_name;
+	struct SYMBOL *next;
+} symbol_t;
+
 typedef struct BREAKPOINT {
 	unsigned long long addr;
 	long value;
-	char *name;
+	symbol_t *sym;
 	struct BREAKPOINT *next;
 	unsigned int idx;
 } breakpoint_t;
@@ -44,15 +54,6 @@ typedef struct TRACEE {
 	char name[SHERLOCK_MAX_STRLEN];
 	char exe_path[SHERLOCK_MAX_STRLEN];
 } tracee_t;
-
-typedef struct SYMBOL {
-	// addr = va_base + rel_addr
-	unsigned long long addr;
-	// if base == 0, then the symbol is dynamic and not yet loaded
-	unsigned long long base;
-	const char *name;
-	struct SYMBOL *next;
-} symbol_t;
 
 int tracee_setup_pid(tracee_t *tracee, int pid);
 int tracee_setup_exec(tracee_t *tracee, char *argv[]);

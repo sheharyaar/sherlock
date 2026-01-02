@@ -155,6 +155,7 @@ static int handle_symtab(
 	}
 
 	Elf_Data *data = NULL;
+	char *file_name = NULL;
 	while ((data = elf_getdata(scn, data)) != NULL) {
 		size_t count = hdr->sh_size / hdr->sh_entsize;
 
@@ -165,6 +166,18 @@ static int handle_symtab(
 				       "index %ld",
 				    i);
 				return -1;
+			}
+
+			// if filename is present
+			if (GELF_ST_TYPE(sym.st_info) == STT_FILE) {
+				file_name =
+				    elf_strptr(elf, strtab_idx, sym.st_name);
+				if (file_name != NULL && file_name[0] == '\0') {
+					file_name = NULL;
+				} else {
+					pr_debug("[symbol] file_name=%d",
+					    file_name[0]);
+				}
 			}
 
 			if (GELF_ST_TYPE(sym.st_info) != STT_FUNC ||
@@ -186,6 +199,12 @@ static int handle_symtab(
 				pr_err("calloc for sym failed: %s",
 				    strerror(errno));
 				return -1;
+			}
+
+			// according to the manpage, the file name is only for
+			// STB_LOCAL bindings
+			if (GELF_ST_BIND(sym.st_info) == STB_LOCAL) {
+				s->file_name = file_name;
 			}
 
 			s->base = tracee->va_base;
