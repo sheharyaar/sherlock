@@ -205,7 +205,6 @@ static int handle_rela_plt(Elf *elf, Elf_Scn *scn, Elf64_Shdr *hdr,
 		    elf_strptr(elf, symtab_shdr.sh_link, sym.st_name);
 
 		const char *lib_name = NULL;
-		// TODO: resolve '.so' name
 		// Look into dynamic section for verneed and versym tables
 		// For dynsym <-> .gnu.version (1:1), so,
 		// for symbol i, n = version[i] is the version index

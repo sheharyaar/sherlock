@@ -36,8 +36,8 @@ typedef enum ENTITY_E {
 typedef enum ACTION_E {
 	ACTION_RUN,
 	ACTION_STEP,
-	ACTION_NEXT,  // TODO
-	ACTION_BREAK, // TODO
+	ACTION_NEXT,
+	ACTION_BREAK,
 	ACTION_KILL,
 	// information / inspection
 	ACTION_PRINT,
