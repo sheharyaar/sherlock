@@ -73,7 +73,76 @@ int elf_mem_va_base(tracee_t *tracee)
 	return 0;
 }
 
-static int handle_rela(Elf *elf, Elf_Scn *scn, Elf64_Shdr *hdr)
+static const char *handle_dso_syms(Elf *elf, unsigned int versym_idx,
+    Elf_Scn *versym_scn, Elf_Scn *verneed_scn)
+{
+	Elf_Data *versym_data = elf_getdata(versym_scn, NULL);
+	if (!versym_data) {
+		pr_err("error in fetching .gnu.version data");
+		return NULL;
+	}
+
+	GElf_Versym verneed_idx;
+	if (gelf_getversym(versym_data, versym_idx, &verneed_idx) == NULL) {
+		pr_err("gelf_getversym failed");
+		return NULL;
+	}
+
+	// 0: local, 1: global (reserved for these)
+	if (verneed_idx <= 1) {
+		return NULL;
+	}
+
+	Elf_Data *verneed_data = elf_getdata(verneed_scn, NULL);
+	if (!verneed_data) {
+		pr_err("error in fetching .gnu.version_r data");
+		return NULL;
+	}
+
+	Elf64_Shdr *verneed_hdr = NULL;
+	if ((verneed_hdr = elf64_getshdr(verneed_scn)) == NULL) {
+		pr_err("error in VERNEED elf64_getshdr(): %s",
+		    elf_errmsg(elf_errno()));
+		return NULL;
+	}
+
+	// Version Structures
+	unsigned int offset = 0;
+	for (unsigned int i = 0; i < verneed_hdr->sh_info; i++) {
+		GElf_Verneed ver_need;
+		if (gelf_getverneed(verneed_data, offset, &ver_need) == NULL) {
+			pr_err("error in elf_getverneed");
+			continue;
+		}
+		const char *name =
+		    elf_strptr(elf, verneed_hdr->sh_link, ver_need.vn_file);
+
+		// Auxiliary version structures, need to match index with this
+		// version
+		unsigned int verneed_aux_off = offset + ver_need.vn_aux;
+		for (int m = 0; m < ver_need.vn_cnt; m++) {
+			GElf_Vernaux verneed_aux;
+			if (gelf_getvernaux(verneed_data, verneed_aux_off,
+				&verneed_aux) == NULL) {
+				pr_err("error in gelf_getvernaux");
+				continue;
+			}
+
+			if (verneed_aux.vna_other == verneed_idx) {
+				return name;
+			}
+
+			verneed_aux_off += verneed_aux.vna_next;
+		}
+
+		offset = ver_need.vn_next;
+	}
+
+	return NULL;
+}
+
+static int handle_rela_plt(Elf *elf, Elf_Scn *scn, Elf64_Shdr *hdr,
+    Elf_Scn *versym_scn, Elf_Scn *verneed_scn)
 {
 	// consider only non-dynamically linked functions, i.e,
 	// offset != 0, type == FUNC, indx != UND
@@ -121,8 +190,34 @@ static int handle_rela(Elf *elf, Elf_Scn *scn, Elf64_Shdr *hdr)
 			return -1;
 		}
 
+		// ignore anything other than func
+		if (GELF_ST_TYPE(sym.st_info) != STT_FUNC) {
+			continue;
+		}
+
+		// consider only local and global bindings
+		if (GELF_ST_BIND(sym.st_info) != STB_GLOBAL &&
+		    GELF_ST_BIND(sym.st_info) != STB_LOCAL) {
+			continue;
+		}
+
 		const char *name =
 		    elf_strptr(elf, symtab_shdr.sh_link, sym.st_name);
+
+		const char *lib_name = NULL;
+		// TODO: resolve '.so' name
+		// Look into dynamic section for verneed and versym tables
+		// For dynsym <-> .gnu.version (1:1), so,
+		// for symbol i, n = version[i] is the version index
+		// and .gnu.version_r[n] is the symbol version
+		if (versym_scn && verneed_scn) {
+			lib_name = handle_dso_syms(elf, GELF_R_SYM(rela.r_info),
+			    versym_scn, verneed_scn);
+		} else {
+			pr_warn(
+			    ".gnu.version or .gnu.version_r sections not "
+			    "available, will affect DSO library resolution");
+		}
 
 		symbol_t *s = calloc(1, sizeof(*s));
 		if (!s) {
@@ -130,14 +225,16 @@ static int handle_rela(Elf *elf, Elf_Scn *scn, Elf64_Shdr *hdr)
 			return -1;
 		}
 
-		s->base = 0;
-		// TODO: do I need ot handle addend ?
+		s->base = 0; // TODO: handle this change when symbol loads
+		// TODO: do I need to handle addend ?
 		s->addr = s->base + rela.r_offset;
 		s->name = name;
+		s->need_plt_resolve = true;
+		s->file_name = lib_name;
 		s->next = sherlock_symtab;
 		sherlock_symtab = s;
-		pr_debug("[symbol] name=%s, addr=%#llx, base=%#llx", s->name,
-		    s->addr, s->base);
+		pr_debug("[symbol] name=%s, file=%s, addr=%#llx, base=%#llx",
+		    s->name, s->file_name, s->addr, s->base);
 	}
 
 	return 0;
@@ -175,8 +272,8 @@ static int handle_symtab(
 				if (file_name != NULL && file_name[0] == '\0') {
 					file_name = NULL;
 				} else {
-					pr_debug("[symbol] file_name=%d",
-					    file_name[0]);
+					pr_debug(
+					    "[symbol] file_name=%s", file_name);
 				}
 			}
 
@@ -210,6 +307,7 @@ static int handle_symtab(
 			s->base = tracee->va_base;
 			s->addr = s->base + sym.st_value;
 			s->name = name;
+			s->need_plt_resolve = false;
 			s->next = sherlock_symtab;
 			sherlock_symtab = s;
 			pr_debug("[symbol] name=%s, addr=%#llx, base=%#llx",
@@ -242,11 +340,24 @@ int elf_setup_syms(tracee_t *tracee)
 		goto out;
 	}
 
+	size_t shstr_indx;
+	if (elf_getshdrstrndx(elf, &shstr_indx) == -1) {
+		pr_err(
+		    "error in elf_getshdrstrndx: %s", elf_errmsg(elf_errno()));
+		goto elf_out;
+	}
+
 	Elf_Scn *scn = NULL;
 	Elf64_Shdr *hdr = NULL;
+	Elf_Scn *rela_scn = NULL;
+	Elf64_Shdr *rela_hdr = NULL;
+	Elf_Scn *versym_scn = NULL;
+	Elf_Scn *verneed_scn = NULL;
+	Elf_Scn *symtab_scn = NULL;
+	Elf64_Shdr *symtab_hdr = NULL;
 	while ((scn = elf_nextscn(elf, scn)) != NULL) {
 		if ((hdr = elf64_getshdr(scn)) == NULL) {
-			pr_err("error in elf_nextscn(): %s",
+			pr_err("error in elf64_getshdr(): %s",
 			    elf_errmsg(elf_errno()));
 			continue;
 		}
@@ -255,22 +366,43 @@ int elf_setup_syms(tracee_t *tracee)
 		// (hdr->link) and the corresponding strtab for symbol name
 		// (symtab_hdr->link)
 		if (hdr->sh_type == SHT_RELA) {
-			pr_debug("handling rela");
-			if (handle_rela(elf, scn, hdr) == -1) {
-				pr_err("handling symtab failed");
-				goto elf_out;
+			char *name = elf_strptr(elf, shstr_indx, hdr->sh_name);
+			if (strcmp(name, ".rela.plt") == 0) {
+				rela_scn = scn;
+				rela_hdr = hdr;
 			}
 		}
 
 		// iterate over SYMTAB entries, then check for the strtab
 		// (hdr->link) for string table index.
 		if (hdr->sh_type == SHT_SYMTAB) {
-			pr_debug("handling symtab");
-			if (handle_symtab(tracee, elf, scn, hdr) == -1) {
-				pr_err("handling symtab failed");
-				goto elf_out;
-			}
+			symtab_scn = scn;
+			symtab_hdr = hdr;
 		}
+
+		if (hdr->sh_type == SHT_GNU_versym) {
+			versym_scn = scn;
+		}
+
+		if (hdr->sh_type == SHT_GNU_verneed) {
+			verneed_scn = scn;
+		}
+	}
+
+	if (!rela_scn || !symtab_scn) {
+		pr_err("error in parsing ELF sections");
+		goto elf_out;
+	}
+
+	if (handle_rela_plt(elf, rela_scn, rela_hdr, versym_scn, verneed_scn) ==
+	    -1) {
+		pr_err("handling symtab failed");
+		goto elf_out;
+	}
+
+	if (handle_symtab(tracee, elf, symtab_scn, symtab_hdr) == -1) {
+		pr_err("handling symtab failed");
+		goto elf_out;
 	}
 
 	// cant use elf_end here as the string pointers are in use.

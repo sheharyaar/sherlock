@@ -11,6 +11,7 @@
 #define _SHERLOCK_H
 
 #include "log.h"
+#include <stdbool.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -34,6 +35,7 @@ typedef struct SYMBOL {
 	const char *name;
 	const char *file_name;
 	struct SYMBOL *next;
+	bool need_plt_resolve;
 } symbol_t;
 
 typedef struct BREAKPOINT {
@@ -42,6 +44,7 @@ typedef struct BREAKPOINT {
 	symbol_t *sym;
 	struct BREAKPOINT *next;
 	unsigned int idx;
+	unsigned int counter;
 } breakpoint_t;
 
 typedef struct TRACEE {

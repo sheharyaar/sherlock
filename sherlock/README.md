@@ -57,3 +57,4 @@ The binary will be created under the `build/` directory in the project root.
 - [Exception frames - Linux Refspec](https://refspecs.linuxfoundation.org/LSB_3.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html)
 - [How the GDB debugger and other tools use call frame information to determine the active function calls](https://opensource.com/article/23/3/gdb-debugger-call-frame-active-function-calls?extIdCarryOver=true&sc_cid=RHCTG0180000382541)
 - [Frame pointers: Untangling the unwinding](https://developers.redhat.com/articles/2023/07/31/frame-pointers-untangling-unwinding#)
+- [Understanding `_dl_runtime_resolve()`](https://ypl.coffee/dl-resolve/)
