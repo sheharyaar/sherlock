@@ -7,13 +7,13 @@
  * This file is licensed under the MIT License.
  */
 
-#include <sherlock/elf.h>
+#include <sherlock/sym.h>
 #include "action_internal.h"
 
 static tracee_state_e info_funcs(__attribute__((unused)) tracee_t *tracee,
     __attribute__((unused)) char *args)
 {
-	elf_sym_printall();
+	sym_printall();
 	return TRACEE_STOPPED;
 }
 

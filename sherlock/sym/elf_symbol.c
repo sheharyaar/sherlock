@@ -7,7 +7,7 @@
  * This file is licensed under the MIT License.
  */
 
-#include "elf_internal.h"
+#include "sym_internal.h"
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -19,7 +19,7 @@ static int sherlock_sym_cmp(const symbol_t *a, const symbol_t *b)
 	return (symbol_t *)a->addr - (symbol_t *)b->addr; // Ascending order
 }
 
-static void elf_sym_freeall(void)
+static void sym_freeall(void)
 {
 	symbol_t *s = sherlock_symtab;
 	symbol_t *t = NULL;
@@ -30,7 +30,7 @@ static void elf_sym_freeall(void)
 	}
 }
 
-void elf_sym_printall()
+void sym_printall()
 {
 	symbol_t *s = sherlock_symtab;
 	int i = 0;
@@ -122,7 +122,7 @@ static int handle_syms(
 	return 0;
 }
 
-int elf_setup_syms(tracee_t *tracee)
+int sym_setup(tracee_t *tracee)
 {
 	pr_debug("opening and reading file: %s", tracee->exe_path);
 	int fd = open(tracee->exe_path, O_RDONLY);
@@ -227,7 +227,7 @@ err:
 	return -1;
 }
 
-int elf_sym_lookup(char *name, symbol_t ***sym_list)
+int sym_lookup(char *name, symbol_t ***sym_list)
 {
 	symbol_t *s = sherlock_symtab;
 	symbol_t **s_list = NULL;
@@ -252,10 +252,10 @@ int elf_sym_lookup(char *name, symbol_t ***sym_list)
 	return count;
 }
 
-void elf_cleanup()
+void sym_cleanup()
 {
 	if (sherlock_symtab != NULL)
-		elf_sym_freeall();
+		sym_freeall();
 
 	if (elf != NULL)
 		elf_end(elf);

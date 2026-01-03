@@ -7,14 +7,14 @@
  * This file is licensed under the MIT License.
  */
 
-#ifndef _SHERLOCK_ELF_H
-#define _SHERLOCK_ELF_H
+#ifndef _SHERLOCK_SYM_H
+#define _SHERLOCK_SYM_H
 
 #include <sherlock/sherlock.h>
 
-int elf_setup_syms(tracee_t *tracee);
-int elf_sym_lookup(char *name, symbol_t ***sym_list);
-void elf_sym_printall();
-void elf_cleanup();
+int sym_setup(tracee_t *tracee);
+int sym_lookup(char *name, symbol_t ***sym_list);
+void sym_printall();
+void sym_cleanup();
 
 #endif

@@ -29,11 +29,11 @@ endif
 # Sources and objects
 SRC  := $(wildcard *.c) \
         $(wildcard actions/*.c) \
-		$(wildcard elf/*.c)
+		$(wildcard sym/*.c)
 HEADERS := $(wildcard include/*.h) \
 		   $(wildcard *.h) \
 		   $(wildcard actions/*.h) \
-		   $(wildcard elf/*.h)
+		   $(wildcard sym/*.h)
 OBJ  := $(SRC:.c=.o)
 
 # Ensure object directories exist

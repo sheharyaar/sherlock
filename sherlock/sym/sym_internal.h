@@ -7,10 +7,10 @@
  * This file is licensed under the MIT License.
  */
 
-#ifndef _SHERLOCK_ELF_INTERNAL_H
-#define _SHERLOCK_ELF_INTERNAL_H
+#ifndef _SHERLOCK_SYM_INTERNAL_H
+#define _SHERLOCK_SYM_INTERNAL_H
 
-#include <sherlock/elf.h>
+#include <sherlock/sym.h>
 #include <string.h>
 #include <errno.h>
 #include <libelf.h>

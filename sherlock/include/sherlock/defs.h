@@ -73,6 +73,12 @@ typedef struct BREAKPOINT {
 	unsigned int counter;
 } breakpoint_t;
 
+typedef struct MEM_MAP {
+	unsigned long long start;
+	unsigned long long end;
+	char *name;
+} mem_map_t;
+
 typedef struct TRACEE {
 	pid_t pid;
 	breakpoint_t *bp;

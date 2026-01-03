@@ -10,7 +10,7 @@
 #define _GNU_SOURCE
 #include <sherlock/tracee.h>
 #include <sherlock/actions.h>
-#include <sherlock/elf.h>
+#include <sherlock/sym.h>
 #include <assert.h>
 #include <errno.h>
 #include <libunwind-ptrace.h>
@@ -45,7 +45,7 @@ static pid_t sherlock_pid = 0;
 static void exit_handler(void)
 {
 	pr_info("triggering exit handler");
-	elf_cleanup();
+	sym_cleanup();
 
 	if (global_tracee.unw_context != NULL)
 		_UPT_destroy(global_tracee.unw_context);
@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	if (elf_setup_syms(&global_tracee) == -1) {
+	if (sym_setup(&global_tracee) == -1) {
 		pr_err("elf symbol parsing failed");
 		goto cleanup_unw;
 	}

@@ -8,7 +8,7 @@
  */
 
 #include "action_internal.h"
-#include <sherlock/elf.h>
+#include <sherlock/sym.h>
 #include <sys/ptrace.h>
 #include <stdlib.h>
 
@@ -89,7 +89,7 @@ static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
 	symbol_t **sym_list = NULL;
 	symbol_t *sym = NULL;
 
-	int count = elf_sym_lookup(func, &sym_list);
+	int count = sym_lookup(func, &sym_list);
 	if (count == -1) {
 		pr_err("error in symbol lookup");
 		return TRACEE_STOPPED;
