@@ -7,13 +7,15 @@
  * This file is licensed under the MIT License.
  */
 
-#include "elf.h"
+#include "sherlock.h"
+#include <errno.h>
+#include <string.h>
 
 #define PROC_MAPS "/proc/%d/maps"
 
 // Sets the base virtual address of the tracee using proc/<pid>/maps file.
 // Returns -1 on failure.
-int elf_mem_va_base(tracee_t *tracee)
+int proc_mem_maps(tracee_t *tracee)
 {
 	// read the /proc/pid/maps file and get the PID
 	char proc_maps_filename[SHERLOCK_MAX_STRLEN];

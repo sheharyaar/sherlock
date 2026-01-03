@@ -237,7 +237,7 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[])
 		}
 
 		// fetch the memory map base
-		if (elf_mem_va_base(tracee) < 0) {
+		if (proc_mem_maps(tracee) < 0) {
 			pr_err("could not get tracee memory VA base "
 			       "address, trace failed");
 			goto parent_err;

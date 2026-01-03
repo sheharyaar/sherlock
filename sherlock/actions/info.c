@@ -7,7 +7,7 @@
  * This file is licensed under the MIT License.
  */
 
-#include "../action.h"
+#include "action.h"
 
 static tracee_state_e info_funcs(__attribute__((unused)) tracee_t *tracee,
     __attribute__((unused)) char *args)

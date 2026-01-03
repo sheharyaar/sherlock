@@ -31,6 +31,7 @@ SRC  := $(wildcard *.c) \
         $(wildcard actions/*.c) \
 		$(wildcard elf/*.c)
 HEADERS := $(wildcard *.h) \
+		   $(wildcard actions/*.h) \
 		   $(wildcard elf/*.h)
 OBJ  := $(SRC:.c=.o)
 

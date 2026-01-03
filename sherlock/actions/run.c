@@ -7,7 +7,7 @@
  * This file is licensed under the MIT License.
  */
 
-#include "../action.h"
+#include "action.h"
 #include <sys/ptrace.h>
 
 static tracee_state_e run(tracee_t *tracee, __attribute__((unused)) char *args)

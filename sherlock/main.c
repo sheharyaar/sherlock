@@ -10,7 +10,7 @@
 #define _GNU_SOURCE
 #include "log.h"
 #include "sherlock.h"
-#include "action.h"
+#include "actions/action.h"
 #include <assert.h>
 #include <errno.h>
 #include <signal.h>

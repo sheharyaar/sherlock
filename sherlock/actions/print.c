@@ -7,7 +7,7 @@
  * This file is licensed under the MIT License.
  */
 
-#include "../action.h"
+#include "action.h"
 #include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>

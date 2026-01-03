@@ -10,7 +10,7 @@
 #ifndef _SHERLOCK_ACTION_H
 #define _SHERLOCK_ACTION_H
 
-#include "sherlock.h"
+#include "../sherlock.h"
 #include <errno.h>
 #include <string.h>
 #include <stdbool.h>

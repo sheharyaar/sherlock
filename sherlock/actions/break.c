@@ -7,7 +7,7 @@
  * This file is licensed under the MIT License.
  */
 
-#include "../action.h"
+#include "action.h"
 #include <stdlib.h>
 
 /*
@@ -102,11 +102,12 @@ static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
 		char inp;
 		scanf("%c", &inp);
 		if (inp != 'Y' && inp != 'y') {
-			pr_info_raw("not adding breakpoint");
+			pr_info_raw("not adding breakpoint\n");
 			goto err_list;
 		}
 
 		// TODO: yet to be implemented
+		// TOOD: fix double >dbg prompt
 		goto err_list;
 	}
 

@@ -7,10 +7,7 @@
  * This file is licensed under the MIT License.
  */
 
-#include "log.h"
-#include "sherlock.h"
 #include "action.h"
-#include <search.h>
 #include <stdlib.h>
 #include <string.h>
 
