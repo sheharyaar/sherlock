@@ -7,18 +7,13 @@
  * This file is licensed under the MIT License.
  */
 
-#ifndef _SHERLOCK_H
-#define _SHERLOCK_H
+#ifndef _SHERLOCK_DEFS_H
+#define _SHERLOCK_DEFS_H
 
-#include "log.h"
+#include <libunwind.h>
 #include <stdbool.h>
-#include <sys/ptrace.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <libunwind-ptrace.h>
 
 #define SHERLOCK_MAX_STRLEN 256
-#define MATCH_STR(str_var, str) strcmp(str_var, #str) == 0
 
 typedef enum {
 	TRACEE_INIT,
@@ -27,6 +22,36 @@ typedef enum {
 	TRACEE_KILLED,
 	TRACEE_ERR
 } tracee_state_e;
+
+typedef enum ENTITY_E {
+	ENTITY_FUNCTION,
+	ENTITY_VARIABLE,
+	ENTITY_ADDRESS,
+	ENTITY_LINE,
+	ENTITY_FILE_LINE,
+	ENTITY_REGISTER,
+	ENTITY_BREAKPOINT,
+	ENTITY_NONE, // entities not belonging to the other above
+	ENTITY_COUNT
+} entity_e;
+
+typedef enum ACTION_E {
+	ACTION_RUN,
+	ACTION_STEP,
+	ACTION_NEXT,
+	ACTION_BREAK,
+	ACTION_KILL,
+	// information / inspection
+	ACTION_PRINT,
+	ACTION_SET,
+	ACTION_INFO,
+	ACTION_BACKTRACE,
+	ACTION_EXAMINE,
+	ACTION_WATCH,
+	ACTION_THREAD,
+	ACTION_THREAD_APPLY,
+	ACTION_COUNT,
+} action_e;
 
 typedef struct SYMBOL {
 	// addr = va_base + rel_addr
@@ -58,15 +83,5 @@ typedef struct TRACEE {
 	char name[SHERLOCK_MAX_STRLEN];
 	char exe_path[SHERLOCK_MAX_STRLEN];
 } tracee_t;
-
-int tracee_setup_pid(tracee_t *tracee, int pid);
-int tracee_setup_exec(tracee_t *tracee, char *argv[]);
-
-int elf_setup_syms(tracee_t *tracee);
-int elf_sym_lookup(char *name, symbol_t ***sym_list);
-void elf_sym_printall();
-void elf_cleanup();
-
-int proc_mem_maps(tracee_t *tracee);
 
 #endif

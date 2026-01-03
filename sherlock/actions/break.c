@@ -7,7 +7,9 @@
  * This file is licensed under the MIT License.
  */
 
-#include "action.h"
+#include "action_internal.h"
+#include <sherlock/elf.h>
+#include <sys/ptrace.h>
 #include <stdlib.h>
 
 /*

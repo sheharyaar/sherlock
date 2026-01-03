@@ -7,15 +7,17 @@
  * This file is licensed under the MIT License.
  */
 
-#ifndef _SHERLOCK_ELF_H
-#define _SHERLOCK_ELF_H
+#ifndef _SHERLOCK_ELF_INTERNAL_H
+#define _SHERLOCK_ELF_INTERNAL_H
 
-#include "../sherlock.h"
+#include <sherlock/elf.h>
 #include <string.h>
 #include <errno.h>
 #include <libelf.h>
 #include <gelf.h>
 #include <stdlib.h>
+
+#define MATCH_STR(str_var, str) strcmp(str_var, #str) == 0
 
 #define SHERLOCK_SYMBOL_EQ(sym1, sym2)                                         \
 	sym1->base == sym2->base && sym1->addr == sym2->addr &&                \

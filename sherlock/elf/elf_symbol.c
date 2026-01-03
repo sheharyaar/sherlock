@@ -7,7 +7,7 @@
  * This file is licensed under the MIT License.
  */
 
-#include "elf.h"
+#include "elf_internal.h"
 #include <fcntl.h>
 #include <unistd.h>
 

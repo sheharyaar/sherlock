@@ -7,7 +7,7 @@
  * This file is licensed under the MIT License.
  */
 
-#include "sherlock.h"
+#include <sherlock/tracee.h>
 #include <errno.h>
 #include <string.h>
 
@@ -15,7 +15,7 @@
 
 // Sets the base virtual address of the tracee using proc/<pid>/maps file.
 // Returns -1 on failure.
-int proc_mem_maps(tracee_t *tracee)
+int tracee_proc_mem_maps(tracee_t *tracee)
 {
 	// read the /proc/pid/maps file and get the PID
 	char proc_maps_filename[SHERLOCK_MAX_STRLEN];

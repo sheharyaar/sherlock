@@ -7,7 +7,8 @@
  * This file is licensed under the MIT License.
  */
 
-#include "action.h"
+#include <sherlock/elf.h>
+#include "action_internal.h"
 
 static tracee_state_e info_funcs(__attribute__((unused)) tracee_t *tracee,
     __attribute__((unused)) char *args)

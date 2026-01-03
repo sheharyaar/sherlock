@@ -7,48 +7,18 @@
  * This file is licensed under the MIT License.
  */
 
-#ifndef _SHERLOCK_ACTION_H
-#define _SHERLOCK_ACTION_H
+#ifndef _SHERLOCK_ACTION_INTERNAL_H
+#define _SHERLOCK_ACTION_INTERNAL_H
 
-#include "../sherlock.h"
-#include <errno.h>
-#include <string.h>
+#include <sherlock/actions.h>
 #include <stdbool.h>
-#include <math.h>
+#include <string.h>
+#include <errno.h>
 
 // Not using strncmp here, as I want to match the complete string, not the pref
 
 #define UNKNOWN_ADDR_STR "??"
-
-typedef enum ENTITY_E {
-	ENTITY_FUNCTION,
-	ENTITY_VARIABLE,
-	ENTITY_ADDRESS,
-	ENTITY_LINE,
-	ENTITY_FILE_LINE,
-	ENTITY_REGISTER,
-	ENTITY_BREAKPOINT,
-	ENTITY_NONE, // entities not belonging to the other above
-	ENTITY_COUNT
-} entity_e;
-
-typedef enum ACTION_E {
-	ACTION_RUN,
-	ACTION_STEP,
-	ACTION_NEXT,
-	ACTION_BREAK,
-	ACTION_KILL,
-	// information / inspection
-	ACTION_PRINT,
-	ACTION_SET,
-	ACTION_INFO,
-	ACTION_BACKTRACE,
-	ACTION_EXAMINE,
-	ACTION_WATCH,
-	ACTION_THREAD,
-	ACTION_THREAD_APPLY,
-	ACTION_COUNT,
-} action_e;
+#define MATCH_STR(str_var, str) strcmp(str_var, #str) == 0
 
 typedef tracee_state_e (*handler_entity_t)(tracee_t *tracee, char *args);
 typedef bool (*handler_match_t)(char *act);
@@ -67,8 +37,6 @@ int action_handler_reg(action_t *act);
 // handlers. Example: "info" can call "print" handlers to print the values.
 tracee_state_e action_handler_call(
     tracee_t *t, action_e act, entity_e ent, char *args);
-
-tracee_state_e action_parse_input(tracee_t *t, char *input);
 
 #define REG_ACTION(action, act)                                                \
 	__attribute__((constructor)) static void register_##action_handler(    \

@@ -7,7 +7,7 @@
  * This file is licensed under the MIT License.
  */
 
-#include "action.h"
+#include "action_internal.h"
 #include <signal.h>
 #include <stdio.h>
 

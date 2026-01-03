@@ -7,8 +7,8 @@
  * This file is licensed under the MIT License.
  */
 
-#ifndef _LOG_H
-#define _LOG_H
+#ifndef _SHERLOCK_LOG_H
+#define _SHERLOCK_LOG_H
 
 #include <stdio.h>
 

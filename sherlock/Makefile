@@ -7,7 +7,7 @@
 
 # Compiler and flags
 CC      := gcc
-CFLAGS  := -Wall -Wextra -g -I/usr/include/x86_64-linux-gnu
+CFLAGS  := -Wall -Wextra -g -I/usr/include/x86_64-linux-gnu -I./include
 LDFLAGS := -lm -lunwind-ptrace -lunwind-generic -lunwind -lelf
 
 TARGET  := sherlock
@@ -30,7 +30,8 @@ endif
 SRC  := $(wildcard *.c) \
         $(wildcard actions/*.c) \
 		$(wildcard elf/*.c)
-HEADERS := $(wildcard *.h) \
+HEADERS := $(wildcard include/*.h) \
+		   $(wildcard *.h) \
 		   $(wildcard actions/*.h) \
 		   $(wildcard elf/*.h)
 OBJ  := $(SRC:.c=.o)

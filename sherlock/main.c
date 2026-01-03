@@ -8,16 +8,17 @@
  */
 
 #define _GNU_SOURCE
-#include "log.h"
-#include "sherlock.h"
-#include "actions/action.h"
+#include <sherlock/tracee.h>
+#include <sherlock/actions.h>
+#include <sherlock/elf.h>
 #include <assert.h>
 #include <errno.h>
+#include <libunwind-ptrace.h>
 #include <signal.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ptrace.h>
 #include <sys/user.h>
 #include <sys/wait.h>
 #include <unistd.h>

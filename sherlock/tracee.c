@@ -7,7 +7,7 @@
  * This file is licensed under the MIT License.
  */
 #define _XOPEN_SOURCE 700
-#include "sherlock.h"
+#include <sherlock/tracee.h>
 #include <asm-generic/errno-base.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -237,7 +237,7 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[])
 		}
 
 		// fetch the memory map base
-		if (proc_mem_maps(tracee) < 0) {
+		if (tracee_proc_mem_maps(tracee) < 0) {
 			pr_err("could not get tracee memory VA base "
 			       "address, trace failed");
 			goto parent_err;

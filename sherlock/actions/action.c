@@ -7,9 +7,10 @@
  * This file is licensed under the MIT License.
  */
 
-#include "action.h"
+#include "action_internal.h"
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 static const char *entity_str[ENTITY_COUNT] = {
 	[ENTITY_FUNCTION] = "func",
@@ -91,7 +92,7 @@ int action_handler_reg(action_t *act)
 		ERR_RET_MSG(EINVAL, "passed arg 'act' is NULL");
 	}
 
-	if (act->type < 0 || act->type >= ACTION_COUNT) {
+	if (act->type >= ACTION_COUNT) {
 		ERR_RET_MSG(EINVAL, "invalid act->type(%d)", act->type);
 	}
 
