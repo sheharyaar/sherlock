@@ -8,7 +8,7 @@
  */
 
 #define _GNU_SOURCE
-#include <sherlock/tracee.h>
+#include "sherlock_internal.h"
 #include <sherlock/actions.h>
 #include <sherlock/sym.h>
 #include <assert.h>

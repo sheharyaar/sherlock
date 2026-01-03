@@ -6,9 +6,9 @@
  *
  * This file is licensed under the MIT License.
  */
-#define _XOPEN_SOURCE 700
-#include <sherlock/tracee.h>
-#include <asm-generic/errno-base.h>
+
+#include "sherlock_internal.h"
+#include <sherlock/sym.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <string.h>
@@ -16,70 +16,6 @@
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
-#define PROC_COMM "/proc/%d/comm"
-#define PROC_EXE "/proc/%d/exe"
-
-// Reads the /proc/<PID>/cmdline file and sets the tracee executable name.
-// Returns -1 on error.
-static int get_pid_cmdline(tracee_t *tracee)
-{
-	// get the name of the file
-	char name[SHERLOCK_MAX_STRLEN];
-	char cmdline_file[SHERLOCK_MAX_STRLEN];
-	FILE *cmdline_f = NULL;
-
-	if (snprintf(cmdline_file, SHERLOCK_MAX_STRLEN, PROC_COMM,
-		tracee->pid) < 0) {
-		pr_err("snprint failed: %s", strerror(errno));
-		return -1;
-	}
-
-	if ((cmdline_f = fopen(cmdline_file, "r")) == NULL) {
-		pr_err("opening pid map file failed: %s", strerror(errno));
-		return -1;
-	}
-
-	if (fscanf(cmdline_f, "%s ", name) == EOF) {
-		pr_err("error in fscanf: %s", strerror(ferror(cmdline_f)));
-		if (errno == ENOMEM) {
-			pr_warn("a possible reason can be that the "
-				"/proc/%d/cmdline is more than %d bytes",
-			    tracee->pid, SHERLOCK_MAX_STRLEN);
-		}
-		fclose(cmdline_f);
-		return -1;
-	}
-
-	strncpy(tracee->name, name, SHERLOCK_MAX_STRLEN);
-	tracee->name[SHERLOCK_MAX_STRLEN - 1] = '\0';
-
-	fclose(cmdline_f);
-	return 0;
-}
-
-// Reads the /proc/<PID>/exe link and sets the tracee executable path.
-// Returns -1 on error.
-static int get_pid_exe_name(tracee_t *tracee)
-{
-	// get the name of the file
-	char exe_link_file[SHERLOCK_MAX_STRLEN];
-
-	if (snprintf(exe_link_file, SHERLOCK_MAX_STRLEN, PROC_EXE,
-		tracee->pid) < 0) {
-		pr_err("snprint failed: %s", strerror(errno));
-		return -1;
-	}
-
-	if (readlink(exe_link_file, tracee->exe_path,
-		SHERLOCK_MAX_STRLEN - 1) == -1) {
-		pr_err("readlink failed: %s", strerror(errno));
-		return -1;
-	}
-
-	tracee->exe_path[SHERLOCK_MAX_STRLEN - 1] = '\0';
-	return 0;
-}
 
 // Attaches ptrace tracer with 'options' and stops the tracee.
 // Returns -1 on error.
@@ -116,23 +52,6 @@ err:
 	return -1;
 }
 
-static int get_pid_info(tracee_t *tracee)
-{
-	// get the cmdline name of the process
-	if (get_pid_cmdline(tracee) == -1) {
-		pr_err("error in get_pid_cmdline");
-		return -1;
-	}
-	pr_debug("pid cmdline: %s", tracee->name);
-
-	if (get_pid_exe_name(tracee) == -1) {
-		pr_err("error in get_pid_exe_name");
-		return -1;
-	}
-	pr_debug("pid exe name: %s", tracee->exe_path);
-	return 0;
-}
-
 // Attaches the debugger to the process with PID and sets the fields of the
 // tracee. The tracee will be in stopped state, you can perform other oeprations
 // and then you need to 'continue' the process.
@@ -140,7 +59,7 @@ static int get_pid_info(tracee_t *tracee)
 int tracee_setup_pid(tracee_t *tracee, int pid)
 {
 	tracee->pid = pid;
-	if (get_pid_info(tracee) == -1) {
+	if (sym_proc_pid_info(tracee) == -1) {
 		pr_err("tracee_setup_pid: get_pid_info failed");
 		return -1;
 	}
@@ -231,13 +150,13 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[])
 	if (wstatus >> 8 == (SIGTRAP | (PTRACE_EVENT_EXEC << 8))) {
 		pr_debug("child execed");
 
-		if (get_pid_info(tracee) == -1) {
-			pr_err("tracee_setup_exec: get_pid_info failed");
+		if (sym_proc_pid_info(tracee) == -1) {
+			pr_err("tracee_setup_exec: sym_proc_pid_info failed");
 			goto parent_err;
 		}
 
 		// fetch the memory map base
-		if (tracee_proc_mem_maps(tracee) < 0) {
+		if (sym_proc_map_setup(tracee) < 0) {
 			pr_err("could not get tracee memory VA base "
 			       "address, trace failed");
 			goto parent_err;

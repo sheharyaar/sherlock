@@ -27,13 +27,13 @@ ifeq ($(NOCOLORS),1)
 endif
 
 # Sources and objects
-SRC  := $(wildcard *.c) \
-        $(wildcard actions/*.c) \
-		$(wildcard sym/*.c)
+SRC  := $(wildcard src/*.c) \
+        $(wildcard src/actions/*.c) \
+		$(wildcard src/sym/*.c)
 HEADERS := $(wildcard include/*.h) \
-		   $(wildcard *.h) \
-		   $(wildcard actions/*.h) \
-		   $(wildcard sym/*.h)
+		   $(wildcard src/*.h) \
+		   $(wildcard src/actions/*.h) \
+		   $(wildcard src/sym/*.h)
 OBJ  := $(SRC:.c=.o)
 
 # Ensure object directories exist

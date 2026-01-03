@@ -14,6 +14,8 @@
 
 int sym_setup(tracee_t *tracee);
 int sym_lookup(char *name, symbol_t ***sym_list);
+int sym_proc_map_setup(tracee_t *tracee);
+int sym_proc_pid_info(tracee_t *tracee);
 void sym_printall();
 void sym_cleanup();
 
