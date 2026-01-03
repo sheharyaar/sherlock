@@ -30,13 +30,28 @@
 	} while (0)
 
 static tracee_t global_tracee = {
-	.pid = 0,
 	.bp = NULL,
+	.exe_path = { 0 },
+	.name = { 0 },
+	.pid = 0,
+	.unw_addr = 0,
+	.unw_context = 0,
 	.va_base = 0,
-	.name[0] = '\0',
 };
 
 static pid_t sherlock_pid = 0;
+
+static void exit_handler(void)
+{
+	pr_info("triggering exit handler");
+	elf_cleanup();
+
+	if (global_tracee.unw_context != NULL)
+		_UPT_destroy(global_tracee.unw_context);
+
+	if (global_tracee.unw_addr)
+		unw_destroy_addr_space(global_tracee.unw_addr);
+}
 
 static void __attribute__((noreturn)) print_help_exit(int status)
 {
@@ -183,6 +198,11 @@ static void breakpoint_handle(tracee_t *tracee)
 
 int main(int argc, char *argv[])
 {
+	if (atexit(exit_handler) != 0) {
+		pr_err("error in setting up exit handler");
+		return 1;
+	}
+
 	if (setup(argc, argv, &global_tracee) == -1) {
 		pr_err("error in setting up the tracee");
 		return 1;

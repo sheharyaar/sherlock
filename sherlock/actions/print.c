@@ -44,6 +44,14 @@
 		}                                                              \
 	} while (0)
 
+static tracee_state_e print_func(__attribute__((unused)) tracee_t *tracee,
+    __attribute__((unused)) char *func)
+{
+	// TODO: print function (symbol)
+	pr_info_raw("unimplemented");
+	return TRACEE_STOPPED;
+}
+
 static tracee_state_e print_addr(tracee_t *tracee, char *addr)
 {
 	if (addr == NULL) {
@@ -180,6 +188,7 @@ static action_t action_print = {
 	.ent_handler = {
 		[ENTITY_REGISTER] = print_reg,
 		[ENTITY_ADDRESS] = print_addr,
+		[ENTITY_FUNCTION] = print_func,
 	},
 	.match_action = match_print,
 	.name = "print",

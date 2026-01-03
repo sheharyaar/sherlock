@@ -18,6 +18,7 @@
 #include <libunwind-ptrace.h>
 
 #define SHERLOCK_MAX_STRLEN 256
+#define MATCH_STR(str_var, str) strcmp(str_var, #str) == 0
 
 typedef enum {
 	TRACEE_INIT,
@@ -64,5 +65,7 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[]);
 int elf_setup_syms(tracee_t *tracee);
 int elf_mem_va_base(tracee_t *tracee);
 int elf_sym_lookup(char *name, symbol_t ***sym_list);
+void elf_sym_printall();
+void elf_cleanup();
 
 #endif

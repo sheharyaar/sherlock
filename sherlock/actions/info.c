@@ -9,6 +9,13 @@
 
 #include "../action.h"
 
+static tracee_state_e info_funcs(__attribute__((unused)) tracee_t *tracee,
+    __attribute__((unused)) char *args)
+{
+	elf_sym_printall();
+	return TRACEE_STOPPED;
+}
+
 // gives info about registers, breakpoints, etc.
 static tracee_state_e info_breakpoints(
     tracee_t *tracee, __attribute__((unused)) char *args)
@@ -41,6 +48,7 @@ static action_t action_info = { .type = ACTION_INFO,
 	.ent_handler = {
 	    [ENTITY_BREAKPOINT] = info_breakpoints,
 	    [ENTITY_REGISTER] = info_regs,
+		[ENTITY_FUNCTION] = info_funcs,
 	},
 	.match_action = match_info,
 	.name = "info"

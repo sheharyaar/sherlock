@@ -7,8 +7,8 @@
  * This file is licensed under the MIT License.
  */
 
-#ifndef _ACTION_H
-#define _ACTION_H
+#ifndef _SHERLOCK_ACTION_H
+#define _SHERLOCK_ACTION_H
 
 #include "sherlock.h"
 #include <errno.h>
@@ -17,7 +17,6 @@
 #include <math.h>
 
 // Not using strncmp here, as I want to match the complete string, not the pref
-#define MATCH_STR(str_var, str) strcmp(str_var, #str) == 0
 
 #define UNKNOWN_ADDR_STR "??"
 

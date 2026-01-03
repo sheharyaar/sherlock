@@ -51,6 +51,10 @@ t-pie-cet-noplt: $(SRC)
 		-fno-plt \
 		$(SRC) -o $@ $(LDFLAGS_BASE)
 
+t-static: $(SRC)
+	$(CC) $(CFLAGS_BASE) -static \
+		$(SRC) -o $@ $(LDFLAGS_BASE)
+
 all: \
 	t-baseline \
 	t-now \
@@ -59,7 +63,8 @@ all: \
 	t-noplt \
 	t-noplt-now \
 	t-pie \
-	t-pie-cet-noplt
+	t-pie-cet-noplt \
+	t-static
 
 clean:
 	rm -f t-*

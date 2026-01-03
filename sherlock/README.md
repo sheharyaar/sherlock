@@ -53,7 +53,9 @@ The binary will be created under the `build/` directory in the project root.
 
 - [Notes on Hardware Breakpoints and Watchpoints](https://aarzilli.github.io/debugger-bibliography/hwbreak.html)
 - [GDB Wiki: Breakpoint Handling](https://sourceware.org/gdb/wiki/Internals/Breakpoint%20Handling)
+- [GDB Wiki: How GDB loads symbol files](https://sourceware.org/gdb/wiki/How%20gdb%20loads%20symbol%20files)
 - [An Introduction to Stack Unwinding and Exception Handling](https://www.zyma.me/post/stack-unwind-intro/)
+- [All about Global Offset Table](https://maskray.me/blog/2021-08-29-all-about-global-offset-table)
 - [Exception frames - Linux Refspec](https://refspecs.linuxfoundation.org/LSB_3.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html)
 - [How the GDB debugger and other tools use call frame information to determine the active function calls](https://opensource.com/article/23/3/gdb-debugger-call-frame-active-function-calls?extIdCarryOver=true&sc_cid=RHCTG0180000382541)
 - [Frame pointers: Untangling the unwinding](https://developers.redhat.com/articles/2023/07/31/frame-pointers-untangling-unwinding#)

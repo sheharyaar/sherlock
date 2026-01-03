@@ -28,8 +28,10 @@ endif
 
 # Sources and objects
 SRC  := $(wildcard *.c) \
-        $(wildcard actions/*.c)
-HEADERS := $(wildcard *.h)
+        $(wildcard actions/*.c) \
+		$(wildcard elf/*.c)
+HEADERS := $(wildcard *.h) \
+		   $(wildcard elf/*.h)
 OBJ  := $(SRC:.c=.o)
 
 # Ensure object directories exist

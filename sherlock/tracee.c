@@ -162,7 +162,7 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[])
 	// exec the program, perform IPC for communicating when to exec
 	// and fetching the
 	int pipefd[2];
-	int flag;
+	int flag = 0;
 	pid_t cpid;
 
 	if (pipe(pipefd) == -1) {
