@@ -14,5 +14,6 @@
 
 int tracee_setup_pid(tracee_t *tracee, int pid);
 int tracee_setup_exec(tracee_t *tracee, char *argv[]);
+void tracee_cleanup(tracee_t *tracee);
 
 #endif

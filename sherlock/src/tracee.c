@@ -106,7 +106,7 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[])
 			_exit(1);
 		}
 
-		// TODO: Fix pgid and tty ownership
+		// TODO_LATER: Fix pgid and tty ownership
 		// if (setpgid(0, 0) == -1) {
 		// 	pr_err("error in child setpgid: %s", strerror(errno));
 		// 	_exit(1);
@@ -168,4 +168,14 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[])
 parent_err:
 	kill(cpid, SIGKILL);
 	return -1;
+}
+
+void tracee_cleanup(tracee_t *tracee)
+{
+	pr_debug("tracee cleanup");
+	if (tracee->unw_context != NULL)
+		_UPT_destroy(tracee->unw_context);
+
+	if (tracee->unw_addr)
+		unw_destroy_addr_space(tracee->unw_addr);
 }

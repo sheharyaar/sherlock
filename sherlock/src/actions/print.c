@@ -16,7 +16,7 @@
 #include <sys/ptrace.h>
 #include <sys/user.h>
 
-// TODO: print ENTITY_VARIABLE
+// TODO_LATER: print ENTITY_VARIABLE
 
 #define PRINT_REG(regs, target) pr_info_raw("%lld\n", regs.target);
 
@@ -48,6 +48,7 @@ static tracee_state_e print_func(__attribute__((unused)) tracee_t *tracee,
     __attribute__((unused)) char *func)
 {
 	// TODO: print function (symbol)
+	// here we would require GOT resolution and memory map mapping
 	pr_info_raw("unimplemented");
 	return TRACEE_STOPPED;
 }

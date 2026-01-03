@@ -23,7 +23,7 @@ static tracee_state_e info_breakpoints(
 {
 	breakpoint_t *bp = tracee->bp;
 	while (bp) {
-		// TODO: improve symbol information here
+		// TODO_LATER: improve symbol information here
 		// [n]: 0x123fe12 in <func> at <file:line>, hit_counter=m
 		pr_info_raw("[%d]: %#llx, hit_count=%d\n", bp->idx, bp->addr,
 		    bp->counter);

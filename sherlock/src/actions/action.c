@@ -162,3 +162,15 @@ tracee_state_e action_parse_input(tracee_t *tracee, char *input)
 
 	return action_handler_call(tracee, act, ent, args);
 }
+
+void action_cleanup(__attribute__((unused)) tracee_t *tracee)
+{
+	pr_debug("action cleanup");
+	breakpoint_t *bp = tracee->bp;
+	breakpoint_t *t = NULL;
+	while (bp != NULL) {
+		t = bp;
+		bp = bp->next;
+		free(t);
+	}
+}

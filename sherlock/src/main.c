@@ -45,13 +45,9 @@ static pid_t sherlock_pid = 0;
 static void exit_handler(void)
 {
 	pr_info("triggering exit handler");
-	sym_cleanup();
-
-	if (global_tracee.unw_context != NULL)
-		_UPT_destroy(global_tracee.unw_context);
-
-	if (global_tracee.unw_addr)
-		unw_destroy_addr_space(global_tracee.unw_addr);
+	sym_cleanup(&global_tracee);
+	action_cleanup(&global_tracee);
+	tracee_cleanup(&global_tracee);
 }
 
 static void __attribute__((noreturn)) print_help_exit(int status)
@@ -195,7 +191,7 @@ static void breakpoint_handle(tracee_t *tracee)
 	}
 }
 
-// TODO: Add signal handler to send SIGINT to tracee instead of debugger
+// TODO_LATER: Add signal handler to send SIGINT to tracee instead of debugger
 
 int main(int argc, char *argv[])
 {
@@ -231,7 +227,7 @@ int main(int argc, char *argv[])
 		goto cleanup_unw;
 	}
 
-	// TODO: Fix pgid and tty ownership
+	// TODO_LATER: Fix pgid and tty ownership
 	// if (setpgid(0, 0) == -1) {
 	// 	pr_err("error in parent setpgid: %s", strerror(errno));
 	// 	return 1;

@@ -51,6 +51,8 @@ int sym_proc_map_setup(tracee_t *tracee)
 		    start, end, perms, offset, dev, inode,
 		    (n == 7) ? path : "<none>");
 
+		// store the mapping into the memory map array
+
 		if (n < 6)
 			continue;
 

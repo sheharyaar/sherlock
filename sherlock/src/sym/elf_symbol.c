@@ -252,8 +252,9 @@ int sym_lookup(char *name, symbol_t ***sym_list)
 	return count;
 }
 
-void sym_cleanup()
+void sym_cleanup(__attribute__((unused)) tracee_t *tracee)
 {
+	pr_debug("sym cleanup");
 	if (sherlock_symtab != NULL)
 		sym_freeall();
 
