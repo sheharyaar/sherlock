@@ -15,7 +15,7 @@
 #include <sys/user.h>
 #include <sys/wait.h>
 
-// TODO: Check for plt_need_reoslve and patch the PLT entry for this symbol
+// TODO: Check for plt_need_resolve and patch the PLT entry for this symbol
 int breakpoint_add(tracee_t *tracee, unsigned long long bpaddr, symbol_t *sym)
 {
 
@@ -161,7 +161,7 @@ int breakpoint_handle(tracee_t *tracee)
 
 void breakpoint_cleanup(tracee_t *tracee)
 {
-	pr_debug("breakpoint cleabup");
+	pr_debug("breakpoint cleanup");
 	breakpoint_t *bp = tracee->bp;
 	breakpoint_t *t = NULL;
 	while (bp != NULL) {

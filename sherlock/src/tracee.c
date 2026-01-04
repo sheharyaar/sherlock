@@ -173,9 +173,13 @@ parent_err:
 void tracee_cleanup(tracee_t *tracee)
 {
 	pr_debug("tracee cleanup");
-	if (tracee->unw_context != NULL)
+	if (tracee->unw_context != NULL) {
 		_UPT_destroy(tracee->unw_context);
+		tracee->unw_context = NULL;
+	}
 
-	if (tracee->unw_addr)
+	if (tracee->unw_addr != NULL) {
 		unw_destroy_addr_space(tracee->unw_addr);
+		tracee->unw_addr = NULL;
+	}
 }

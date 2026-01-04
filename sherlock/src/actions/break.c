@@ -62,8 +62,8 @@ static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
 			goto err_list;
 		}
 
-		// TODO: yet to be implemented
-		// TOOD: fix double >dbg prompt
+		// TODO_LATER: yet to be implemented
+		// TODO_LATER: fix double >dbg prompt
 		pr_warn("feature not implemented yet");
 		goto err_list;
 	}

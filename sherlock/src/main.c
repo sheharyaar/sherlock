@@ -33,8 +33,8 @@ static tracee_t global_tracee = {
 	.exe_path = { 0 },
 	.name = { 0 },
 	.pid = 0,
-	.unw_addr = 0,
-	.unw_context = 0,
+	.unw_addr = NULL,
+	.unw_context = NULL,
 	.va_base = 0,
 };
 
@@ -43,6 +43,7 @@ static pid_t sherlock_pid = 0;
 static void exit_handler(void)
 {
 	pr_info("triggering exit handler");
+	// breakpoint_cleanup(&global_tracee);
 	sym_cleanup(&global_tracee);
 	action_cleanup(&global_tracee);
 	tracee_cleanup(&global_tracee);
@@ -215,7 +216,9 @@ int main(int argc, char *argv[])
 	return 0;
 
 cleanup_unw:
-	unw_destroy_addr_space(global_tracee.unw_addr);
 	_UPT_destroy(global_tracee.unw_context);
+	global_tracee.unw_context = NULL;
+	unw_destroy_addr_space(global_tracee.unw_addr);
+	global_tracee.unw_addr = NULL;
 	return 1;
 }

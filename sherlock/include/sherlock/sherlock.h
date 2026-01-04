@@ -55,15 +55,18 @@ typedef enum ACTION_E {
 } action_e;
 
 typedef struct SYMBOL {
-	// addr = va_base + rel_addr
+	// (elf) addr = va_base + rel_addr + rel_addend
 	unsigned long long addr;
-	// if base == 0, then the symbol is dynamic and not yet loaded
 	unsigned long long base;
+	unsigned long long res_addr;
+	unsigned long long res_base;
 	unsigned long long size;
 	const char *name;
 	const char *file_name;
 	struct SYMBOL *next;
-	bool need_plt_resolve;
+	bool dyn_sym;
+	// TODO_LATER: duplicate symbols can cause incorrect PEEKTEXT, POKETEXT
+	bool plt_patch;
 } symbol_t;
 
 typedef struct BREAKPOINT {
