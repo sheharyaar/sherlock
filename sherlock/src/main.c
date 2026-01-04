@@ -9,17 +9,15 @@
 
 #define _GNU_SOURCE
 #include "sherlock_internal.h"
-#include <sherlock/actions.h>
-#include <sherlock/sym.h>
 #include <assert.h>
 #include <errno.h>
-#include <libunwind-ptrace.h>
+#include <sherlock/actions.h>
+#include <sherlock/breakpoint.h>
+#include <sherlock/sym.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ptrace.h>
-#include <sys/user.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -115,82 +113,6 @@ static int setup_libunwind(tracee_t *tracee)
 	return 0;
 }
 
-// TOOD: Make the brealpoint permanent
-static void breakpoint_handle(tracee_t *tracee)
-{
-	struct user_regs_struct regs;
-	if (ptrace(PTRACE_GETREGS, tracee->pid, NULL, &regs) == -1) {
-		pr_err("breakpoint_handle: error in getting registers: %s",
-		    strerror(errno));
-		return;
-	}
-
-	bool found = false;
-	breakpoint_t *bp = tracee->bp;
-	while (bp) {
-		if (bp->addr + 1 == regs.rip) {
-			found = true;
-			break;
-		}
-
-		bp = bp->next;
-	}
-
-	// replace the change text and reset the rip
-	if (found) {
-		++bp->counter;
-		if (bp->sym != NULL) {
-			symbol_t *sym = bp->sym;
-			pr_info_raw("Breakpoint %d, '%s' () at %#llx in %s\n",
-			    bp->idx, sym->name, sym->addr,
-			    sym->file_name == NULL ? "??" : sym->file_name);
-		} else {
-			pr_info_raw(
-			    "Breakpoint %d, %#llx\n", bp->idx, bp->addr);
-		}
-		unsigned long val = bp->value;
-		if (ptrace(PTRACE_POKETEXT, tracee->pid, bp->addr, val) == -1) {
-			pr_err("breakpoint_handle: ptrace POKETEXT err - %s",
-			    strerror(errno));
-			return;
-		}
-
-		regs.rip -= 1;
-		if (ptrace(PTRACE_SETREGS, tracee->pid, NULL, &regs) == -1) {
-			pr_err("breakpoint_handle: ptrace SETREGS error - %s",
-			    strerror(errno));
-			return;
-		}
-
-		// single step and reset
-		if (ptrace(PTRACE_SINGLESTEP, tracee->pid, NULL, NULL) == -1) {
-			pr_err("error in breakpoint singleste: %s",
-			    strerror(errno));
-			return;
-		}
-
-		int wstatus = 0;
-		if (waitpid(tracee->pid, &wstatus, 0) < 0) {
-			pr_err("waitpid err: %s", strerror(errno));
-			return;
-		}
-
-		if (!WIFSTOPPED(wstatus)) {
-			pr_err("not stopped by SIGSTOP");
-			return;
-		}
-
-		// restore the breakpoint
-		val = (bp->value & 0xFFFFFFFFFFFFFF00UL) | 0xCCUL;
-		if (ptrace(PTRACE_POKETEXT, tracee->pid, bp->addr, val) == -1) {
-			pr_err(
-			    "breakpoint_handle: error in PTRACE_POKETEXT- %s",
-			    strerror(errno));
-			return;
-		}
-	}
-}
-
 // TODO_LATER: Add signal handler to send SIGINT to tracee instead of debugger
 
 int main(int argc, char *argv[])
@@ -274,7 +196,11 @@ int main(int argc, char *argv[])
 			if (WIFSTOPPED(wstatus)) {
 				if (WSTOPSIG(wstatus) == SIGTRAP) {
 					// could be a breakpoint stop
-					breakpoint_handle(&global_tracee);
+					if (breakpoint_handle(&global_tracee) ==
+					    -1) {
+						pr_err("error in handling "
+						       "SIGTRAP");
+					}
 				} else {
 					pr_info_raw(
 					    "tracee received signal: %s\n",

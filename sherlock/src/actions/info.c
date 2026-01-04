@@ -7,8 +7,9 @@
  * This file is licensed under the MIT License.
  */
 
-#include <sherlock/sym.h>
 #include "action_internal.h"
+#include <sherlock/sym.h>
+#include <sherlock/breakpoint.h>
 
 static tracee_state_e info_funcs(__attribute__((unused)) tracee_t *tracee,
     __attribute__((unused)) char *args)
@@ -21,15 +22,7 @@ static tracee_state_e info_funcs(__attribute__((unused)) tracee_t *tracee,
 static tracee_state_e info_breakpoints(
     tracee_t *tracee, __attribute__((unused)) char *args)
 {
-	breakpoint_t *bp = tracee->bp;
-	while (bp) {
-		// TODO_LATER: improve symbol information here
-		// [n]: 0x123fe12 in <func> at <file:line>, hit_counter=m
-		pr_info_raw("[%d]: %#llx, hit_count=%d\n", bp->idx, bp->addr,
-		    bp->counter);
-		pr_debug("value: %#lx\n", bp->value);
-		bp = bp->next;
-	}
+	breakpoint_printall(tracee);
 	return TRACEE_STOPPED;
 }
 

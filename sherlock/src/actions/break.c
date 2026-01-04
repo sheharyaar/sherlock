@@ -9,6 +9,7 @@
 
 #include "action_internal.h"
 #include <sherlock/sym.h>
+#include <sherlock/breakpoint.h>
 #include <sys/ptrace.h>
 #include <stdlib.h>
 
@@ -17,56 +18,6 @@ TODO:
 - File:line
 - line
 */
-
-static tracee_state_e __breakpoint_addr(
-    tracee_t *tracee, unsigned long long bpaddr, symbol_t *sym)
-{
-
-	long data = ptrace(PTRACE_PEEKTEXT, tracee->pid, bpaddr, NULL);
-	if (data == -1 && errno != 0) {
-		// some error occured
-		if (errno == EIO || errno == EFAULT) {
-			pr_info_raw("the requested memory address(%#llx) is "
-				    "not accessible\n",
-			    bpaddr);
-		} else {
-			pr_err("reading the address(%#llx) failed: %s", bpaddr,
-			    strerror(errno));
-		}
-
-		// this is not a critical error
-		return TRACEE_STOPPED;
-	}
-
-	pr_debug("instruction at address(%#llx): %#lx", bpaddr, (data & 0xFF));
-
-	breakpoint_t *bp = (breakpoint_t *)calloc(1, sizeof(breakpoint_t));
-	if (bp == NULL) {
-		pr_err("breakpoint_add: cannot allocate breakpoint");
-		return TRACEE_ERR;
-	}
-
-	bp->addr = bpaddr;
-	bp->value = data;
-	bp->idx = 0;
-	bp->counter = 0;
-	bp->sym = sym;
-	if (tracee->bp) {
-		bp->idx = tracee->bp->idx + 1;
-	}
-	bp->next = tracee->bp;
-	tracee->bp = bp;
-
-	unsigned long val = (data & 0xFFFFFFFFFFFFFF00UL) | 0xCCUL;
-	if (ptrace(PTRACE_POKETEXT, tracee->pid, bpaddr, val) == -1) {
-		pr_err("breakpoint_add: error in PTRACE_POKETEXT- %s",
-		    strerror(errno));
-		return TRACEE_ERR;
-	}
-
-	pr_info_raw("Breakpoint %d added at address=%#llx\n", bp->idx, bpaddr);
-	return TRACEE_STOPPED;
-}
 
 static tracee_state_e breakpoint_addr(tracee_t *tracee, char *addr)
 {
@@ -79,7 +30,10 @@ static tracee_state_e breakpoint_addr(tracee_t *tracee, char *addr)
 	}
 
 	pr_debug("breaking address: %#llx", bpaddr);
-	return __breakpoint_addr(tracee, bpaddr, NULL);
+	if (breakpoint_add(tracee, bpaddr, NULL) == -1)
+		return TRACEE_ERR;
+
+	return TRACEE_STOPPED;
 }
 
 static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
@@ -110,6 +64,7 @@ static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
 
 		// TODO: yet to be implemented
 		// TOOD: fix double >dbg prompt
+		pr_warn("feature not implemented yet");
 		goto err_list;
 	}
 
@@ -135,13 +90,12 @@ static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
 	sym = sym_list[input];
 
 call_add:
-	if (sym->need_plt_resolve) {
-		// TODO: patch the PLT entries
-	} else {
-		func_addr = sym->addr;
-	}
+	func_addr = sym->addr;
 	free(sym_list);
-	return __breakpoint_addr(tracee, func_addr, sym);
+	if (breakpoint_add(tracee, func_addr, sym) == -1)
+		return TRACEE_ERR;
+
+	return TRACEE_STOPPED;
 
 err_list:
 	free(sym_list);

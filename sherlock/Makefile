@@ -29,10 +29,12 @@ endif
 # Sources and objects
 SRC  := $(wildcard src/*.c) \
         $(wildcard src/actions/*.c) \
+		$(wildcard src/breakpoints/*.c) \
 		$(wildcard src/sym/*.c)
 HEADERS := $(wildcard include/*.h) \
 		   $(wildcard src/*.h) \
 		   $(wildcard src/actions/*.h) \
+		   $(wildcard src/breakpoints/*.h) \
 		   $(wildcard src/sym/*.h)
 OBJ  := $(SRC:.c=.o)
 
