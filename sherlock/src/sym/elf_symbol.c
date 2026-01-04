@@ -107,6 +107,12 @@ static int handle_syms(
 				// only for STB_LOCAL bindings
 				if (GELF_ST_BIND(sym.st_info) == STB_LOCAL) {
 					new_sym->file_name = file_name;
+				} else {
+					mem_map_t *map =
+					    sym_proc_addr_map(new_sym->addr);
+					if (map != NULL) {
+						new_sym->file_name = map->path;
+					}
 				}
 			}
 
@@ -234,12 +240,15 @@ int sym_lookup(char *name, symbol_t ***sym_list)
 	int count = 0;
 	while (s != NULL) {
 		if (strcmp(s->name, name) == 0) {
-			s_list =
+			symbol_t **s_list_tmp =
 			    realloc(s_list, (count + 1) * sizeof(symbol_t *));
-			if (!s_list) {
+			if (!s_list_tmp) {
 				pr_err("error in realloc: %s", strerror(errno));
 				free(s_list);
+				s_list = NULL;
 				return -1;
+			} else {
+				s_list = s_list_tmp;
 			}
 			// dont need count - 1 as count is incremented later
 			s_list[count] = s;
@@ -255,9 +264,15 @@ int sym_lookup(char *name, symbol_t ***sym_list)
 void sym_cleanup(__attribute__((unused)) tracee_t *tracee)
 {
 	pr_debug("sym cleanup");
-	if (sherlock_symtab != NULL)
+	if (sherlock_symtab != NULL) {
 		sym_freeall();
+		sherlock_symtab = NULL;
+	}
 
-	if (elf != NULL)
+	if (elf != NULL) {
 		elf_end(elf);
+		elf = NULL;
+	}
+
+	proc_cleanup(tracee);
 }

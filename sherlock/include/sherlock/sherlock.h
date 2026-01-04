@@ -77,7 +77,7 @@ typedef struct BREAKPOINT {
 typedef struct MEM_MAP {
 	unsigned long long start;
 	unsigned long long end;
-	char *name;
+	char path[SHERLOCK_MAX_STRLEN];
 } mem_map_t;
 
 typedef struct TRACEE {

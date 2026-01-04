@@ -40,4 +40,7 @@
 		}                                                              \
 	} while (0)
 
+void proc_cleanup(tracee_t *tracee);
+mem_map_t *sym_proc_addr_map(unsigned long long addr);
+
 #endif

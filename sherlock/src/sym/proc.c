@@ -9,12 +9,29 @@
 #define _XOPEN_SOURCE 700
 #include <sherlock/sym.h>
 #include <errno.h>
+#include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 
 #define PROC_MAPS "/proc/%d/maps"
 #define PROC_COMM "/proc/%d/comm"
 #define PROC_EXE "/proc/%d/exe"
+
+static mem_map_t *memmap_list = NULL;
+unsigned int memmap_idx = 0;
+
+mem_map_t *sym_proc_addr_map(unsigned long long addr)
+{
+	for (unsigned int i = 0; i < memmap_idx; i++) {
+		if (addr >= memmap_list[i].start &&
+		    addr <= memmap_list[i].end) {
+			return &memmap_list[i];
+		}
+	}
+
+	return NULL;
+}
 
 // Sets the base virtual address of the tracee using proc/<pid>/maps file.
 // Returns -1 on failure.
@@ -36,6 +53,7 @@ int sym_proc_map_setup(tracee_t *tracee)
 	}
 
 	char line[512];
+	unsigned int idx = 0;
 	while (fgets(line, sizeof(line), proc_maps_f)) {
 		unsigned long long start, end, offset;
 		char perms[5];
@@ -46,26 +64,38 @@ int sym_proc_map_setup(tracee_t *tracee)
 		int n = sscanf(line, "%llx-%llx %4s %llx %15s %lu %255[^\n]",
 		    &start, &end, perms, &offset, dev, &inode, path);
 
-		pr_debug("maps: %llx-%llx perms=%s offset=0x%llx dev=%s "
+		pr_debug("[map] %llx-%llx perms=%s offset=0x%llx dev=%s "
 			 "inode=%lu path='%s'",
 		    start, end, perms, offset, dev, inode,
 		    (n == 7) ? path : "<none>");
 
 		// store the mapping into the memory map array
+		mem_map_t *m =
+		    realloc(memmap_list, (idx + 1) * sizeof(mem_map_t));
+		if (m == NULL) {
+			pr_err("error in realloc memmap_list: %s",
+			    strerror(errno));
+			free(memmap_list);
+			memmap_list = NULL;
+			return -1;
+		} else {
+			memmap_list = m;
+		}
 
-		if (n < 6)
-			continue;
+		memmap_list[idx].start = start;
+		memmap_list[idx].end = end;
+		// ignoring stncpy returned values for now
+		strncpy(memmap_list[idx].path, path, 255);
+		memmap_list[idx].path[SHERLOCK_MAX_STRLEN - 1] = '\0';
+		++idx;
 
-		if (offset != 0)
-			continue;
-
-		if (strcmp(path, tracee->exe_path) != 0)
+		if (n < 6 || offset != 0 || strcmp(path, tracee->exe_path) != 0)
 			continue;
 
 		tracee->va_base = start;
-		break;
 	}
 
+	memmap_idx = idx;
 	pr_debug("start address=%#llx", tracee->va_base);
 	fclose(proc_maps_f);
 	return 0;
@@ -147,4 +177,12 @@ int sym_proc_pid_info(tracee_t *tracee)
 	}
 	pr_debug("pid exe name: %s", tracee->exe_path);
 	return 0;
+}
+
+void proc_cleanup(__attribute__((unused)) tracee_t *tracee)
+{
+	if (memmap_list != NULL) {
+		free(memmap_list);
+		memmap_list = NULL;
+	}
 }
