@@ -28,6 +28,8 @@ static void sym_freeall(void)
 		s = s->next;
 		free(t);
 	}
+
+	sherlock_symtab = NULL;
 }
 
 void sym_printall()
@@ -43,7 +45,12 @@ void sym_printall()
 	}
 }
 
-static int handle_syms(
+// static int handle_dynamic_syms(
+//     tracee_t *tracee, Elf *elf, Elf_Scn *scn, Elf64_Shdr *hdr)
+// {
+// }
+
+static int handle_static_syms(
     tracee_t *tracee, Elf *elf, Elf_Scn *scn, Elf64_Shdr *hdr)
 {
 	unsigned long strtab_idx = hdr->sh_link;
@@ -78,8 +85,9 @@ static int handle_syms(
 				}
 			}
 
-			// skip non function entries
-			if (GELF_ST_TYPE(sym.st_info) != STT_FUNC) {
+			// skip non-funciton and non-static func entries
+			if (GELF_ST_TYPE(sym.st_info) != STT_FUNC ||
+			    sym.st_value == 0) {
 				continue;
 			}
 
@@ -93,35 +101,37 @@ static int handle_syms(
 				return -1;
 			}
 
-			if (sym.st_shndx == SHN_UNDEF || sym.st_value == 0) {
-				// lazy load ?
-				// TODO: handle ifunc ?
-				SHERLOCK_SYMBOL(new_sym, 0UL,
-				    0UL + sym.st_value, name, NULL);
-			} else {
-				// static symbols
-				SHERLOCK_SYMBOL(new_sym, tracee->va_base,
-				    tracee->va_base + sym.st_value, name, NULL);
+			// lazy load ?
+			// TODO: handle ifunc ?
+			// SHERLOCK_SYMBOL(new_sym, 0UL,
+			//     0UL + sym.st_value, sym.st_size, name,
+			//     NULL);
 
-				// according to the manpage, the file name is
-				// only for STB_LOCAL bindings
-				if (GELF_ST_BIND(sym.st_info) == STB_LOCAL) {
-					new_sym->file_name = file_name;
-				} else {
-					mem_map_t *map =
-					    sym_proc_addr_map(new_sym->addr);
-					if (map != NULL) {
-						new_sym->file_name = map->path;
-					}
+			// static symbols
+			SHERLOCK_SYMBOL(new_sym, tracee->va_base,
+			    tracee->va_base + sym.st_value, sym.st_size, name,
+			    NULL);
+
+			// according to the manpage, the file name is
+			// only for STB_LOCAL bindings
+			if (GELF_ST_BIND(sym.st_info) == STB_LOCAL) {
+				new_sym->file_name = file_name;
+			} else {
+				// resolve name based on memory maps
+				mem_map_t *map =
+				    sym_proc_addr_map(new_sym->addr);
+				if (map != NULL) {
+					new_sym->file_name = map->path;
 				}
 			}
 
 			new_sym->next = sherlock_symtab;
 			sherlock_symtab = new_sym;
-			pr_debug("[symbol] name=%s, addr=%#llx, base=%#llx, "
+			pr_debug("[symbol] name=%s, size=%#llx, addr=%#llx, "
+				 "base=%#llx, "
 				 "file_name=%s",
-			    new_sym->name, new_sym->addr, new_sym->base,
-			    new_sym->file_name);
+			    new_sym->name, new_sym->size, new_sym->addr,
+			    new_sym->base, new_sym->file_name);
 		}
 	}
 
@@ -199,32 +209,30 @@ int sym_setup(tracee_t *tracee)
 		}
 	}
 
-	// Finalise the symbol section
-	Elf_Scn *sym_scn;
-	Elf64_Shdr *sym_hdr;
-	if (symtab_scn == NULL) {
-		if (dynsym_scn == NULL) {
-			pr_warn("both dynsym and symtab not present, willa "
-				"ffect symbol resolution");
-		} else {
-			// dynsym to be used for sym res
-			sym_scn = dynsym_scn;
-			sym_hdr = dynsym_hdr;
+	if (symtab_scn != NULL) {
+		if (handle_static_syms(tracee, elf, symtab_scn, symtab_hdr) ==
+		    -1) {
+			pr_err("handling symtab failed");
+			goto syms_out;
 		}
-	} else {
-		// symtab to be used for sym res, dynsym is a subset of symtab
-		sym_scn = symtab_scn;
-		sym_hdr = symtab_hdr;
 	}
 
-	if (handle_syms(tracee, elf, sym_scn, sym_hdr) == -1) {
-		pr_err("handling symtab failed");
-		goto elf_out;
+	if (dynsym_scn != NULL) {
+		// if (handle_dynamic_syms(tracee, elf, dynsym_scn, dynsym_hdr)
+		// ==
+		//     -1) {
+		// 	pr_err("handling symtab failed");
+		// 	goto syms_out;
+		// }
 	}
 
 	// cant use elf_end here as the string pointers are in use.
 	return 0;
 
+syms_out:
+	if (sherlock_symtab != NULL) {
+		sym_freeall();
+	}
 elf_out:
 	elf_end(elf);
 out:
@@ -266,7 +274,6 @@ void sym_cleanup(__attribute__((unused)) tracee_t *tracee)
 	pr_debug("sym cleanup");
 	if (sherlock_symtab != NULL) {
 		sym_freeall();
-		sherlock_symtab = NULL;
 	}
 
 	if (elf != NULL) {

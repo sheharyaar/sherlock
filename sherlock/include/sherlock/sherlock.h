@@ -59,6 +59,7 @@ typedef struct SYMBOL {
 	unsigned long long addr;
 	// if base == 0, then the symbol is dynamic and not yet loaded
 	unsigned long long base;
+	unsigned long long size;
 	const char *name;
 	const char *file_name;
 	struct SYMBOL *next;
