@@ -8,6 +8,7 @@
  */
 
 #include <sherlock/breakpoint.h>
+#include <sherlock/sym.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -81,9 +82,9 @@ void breakpoint_printall(tracee_t *tracee)
 {
 	breakpoint_t *bp = tracee->bp;
 	while (bp) {
-		// TODO_LATER: improve symbol information here
-		// [n]: 0x123fe12 in <func> at <file:line>, hit_counter=m
-		pr_info_raw("[%d]: %#llx, hit_count=%d\n", bp->idx, bp->addr,
+		symbol_t *sym = sym_lookup_addr(tracee, bp->addr);
+		pr_info_raw("[%d]: name=%s, address=%#llx, hit_count=%d\n",
+		    bp->idx, sym == NULL ? "??" : sym->name, bp->addr,
 		    bp->counter);
 		pr_debug("value: %#lx", bp->value);
 		bp = bp->next;

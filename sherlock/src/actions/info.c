@@ -20,10 +20,9 @@ static tracee_state_e info_addr(tracee_t *tracee, char *arg)
 		return TRACEE_STOPPED;
 	}
 
-	// TODO: nearest symbol ??
 	symbol_t *sym = sym_lookup_addr(tracee, addr);
 	if (!sym) {
-		pr_info_raw("no symbol matches %s\n", arg);
+		pr_info_raw("No symbol matches %s\n", arg);
 		return TRACEE_STOPPED;
 	}
 
@@ -44,11 +43,11 @@ static tracee_state_e info_func(tracee_t *tracee, char *func)
 	symbol_t *sym = sym_lookup_name(tracee, func);
 	if (sym == NULL) {
 		pr_info_raw(
-		    "the symbol '%s' is not present or loaded yet\n", func);
+		    "The symbol '%s' is not present or loaded yet\n", func);
 		return TRACEE_STOPPED;
 	}
 
-	pr_info_raw("symbol '%s' is at '%#llx' in %s\n", func, sym->addr,
+	pr_info_raw("Symbol '%s' is at '%#llx' in %s\n", func, sym->addr,
 	    sym->file_name);
 	return TRACEE_STOPPED;
 }
