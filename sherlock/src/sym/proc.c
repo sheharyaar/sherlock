@@ -69,14 +69,22 @@ int sym_proc_map_setup(tracee_t *tracee)
 		    start, end, perms, offset, dev, inode,
 		    (n == 7) ? path : "<none>");
 
+		// won't keep memory maps without a name
+		if (n < 7)
+			continue;
+
 		// store the mapping into the memory map array
 		mem_map_t *m =
 		    realloc(memmap_list, (idx + 1) * sizeof(mem_map_t));
 		if (m == NULL) {
 			pr_err("error in realloc memmap_list: %s",
 			    strerror(errno));
-			free(memmap_list);
-			memmap_list = NULL;
+
+			if (memmap_list != NULL) {
+				free(memmap_list);
+				memmap_list = NULL;
+			}
+
 			return -1;
 		} else {
 			memmap_list = m;
@@ -89,7 +97,7 @@ int sym_proc_map_setup(tracee_t *tracee)
 		memmap_list[idx].path[SHERLOCK_MAX_STRLEN - 1] = '\0';
 		++idx;
 
-		if (n < 6 || offset != 0 || strcmp(path, tracee->exe_path) != 0)
+		if (offset != 0 || strcmp(path, tracee->exe_path) != 0)
 			continue;
 
 		tracee->va_base = start;

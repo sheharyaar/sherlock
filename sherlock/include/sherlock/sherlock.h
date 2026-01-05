@@ -56,7 +56,12 @@ typedef enum ACTION_E {
 	ACTION_COUNT,
 } action_e;
 
-// TODO: pointer to section list ?
+typedef struct SECTION_MAP {
+	unsigned long long start;
+	unsigned long long end;
+	const char *name;
+} section_t;
+
 typedef struct MEM_MAP {
 	unsigned long long start;
 	unsigned long long end;
@@ -72,6 +77,7 @@ typedef struct SYMBOL {
 	unsigned long long size;
 	const char *name;
 	const char *file_name;
+	section_t *section;
 	mem_map_t *map;
 	UT_hash_handle hh;
 	bool dyn_sym;

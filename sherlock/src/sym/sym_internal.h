@@ -19,37 +19,49 @@
 
 #define MATCH_STR(str_var, str) strcmp(str_var, #str) == 0
 
-#define SHERLOCK_SYMBOL(                                                       \
-    sym, _base, _addr, _size, _name, _file, _is_dyn, _plt_patch)               \
+#define SHERLOCK_SYMBOL(_sym, _base, _addr, _size, _name, _is_dyn, _plt_patch) \
 	do {                                                                   \
-		sym->base = _base;                                             \
-		sym->addr = _addr;                                             \
-		sym->res_base = 0;                                             \
-		sym->res_addr = 0;                                             \
-		sym->size = _size;                                             \
-		sym->name = _name;                                             \
-		sym->file_name = _file;                                        \
-		sym->dyn_sym = _is_dyn;                                        \
-		sym->plt_patch = _plt_patch;                                   \
-		sym->map = NULL;                                               \
+		_sym->base = _base;                                            \
+		_sym->addr = _addr;                                            \
+		_sym->res_base = 0;                                            \
+		_sym->res_addr = 0;                                            \
+		_sym->size = _size;                                            \
+		_sym->name = _name;                                            \
+		_sym->file_name = NULL;                                        \
+		_sym->dyn_sym = _is_dyn;                                       \
+		_sym->plt_patch = _plt_patch;                                  \
+		_sym->section = NULL;                                          \
+		_sym->map = NULL;                                              \
                                                                                \
 		/* get associated map */                                       \
-		mem_map_t *map =                                               \
-		    sym_proc_addr_map(new_sym->addr, new_sym->size);           \
+		mem_map_t *map = sym_proc_addr_map(_sym->addr, _sym->size);    \
 		if (map != NULL) {                                             \
-			new_sym->map = map;                                    \
-			new_sym->file_name = map->path;                        \
+			_sym->map = map;                                       \
+			_sym->file_name = map->path;                           \
+		} else {                                                       \
+			pr_warn("map for symbol(%s) is NULL", _sym->name);     \
+			free(_sym);                                            \
+			return -1;                                             \
 		}                                                              \
                                                                                \
-		HASH_ADD_KEYPTR(hh, sherlock_symtab, new_sym->name,            \
-		    strlen(new_sym->name), new_sym);                           \
+		section_t *section = sym_addr_section(_sym->addr, _sym->size); \
+		if (!section) {                                                \
+			pr_err("section not found for symbol(%s)", name);      \
+			free(_sym);                                            \
+			return -1;                                             \
+		} else {                                                       \
+			_sym->section = section;                               \
+		}                                                              \
+                                                                               \
+		HASH_ADD_KEYPTR(hh, sherlock_symtab, _sym->name,               \
+		    strlen(_sym->name), _sym);                                 \
 	} while (0)
 
-#define SHERLOCK_SYMBOL_STATIC(sym, _base, _addr, _size, _name, _file)         \
-	SHERLOCK_SYMBOL(sym, _base, _addr, _size, _name, _file, false, false)
+#define SHERLOCK_SYMBOL_STATIC(_sym, _base, _addr, _size, _name)               \
+	SHERLOCK_SYMBOL(_sym, _base, _addr, _size, _name, false, false)
 
-#define SHERLOCK_SYMBOL_DYN(sym, _base, _addr, _name, _plt_patch)              \
-	SHERLOCK_SYMBOL(sym, _base, _addr, 0UL, _name, NULL, true, _plt_patch)
+#define SHERLOCK_SYMBOL_DYN(_sym, _base, _addr, _name, _plt_patch)             \
+	SHERLOCK_SYMBOL(_sym, _base, _addr, 0UL, _name, true, _plt_patch)
 
 void proc_cleanup(tracee_t *tracee);
 mem_map_t *sym_proc_addr_map(unsigned long long addr, unsigned long long size);

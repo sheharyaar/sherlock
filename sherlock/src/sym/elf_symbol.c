@@ -12,9 +12,24 @@
 #include <unistd.h>
 
 static symbol_t *sherlock_symtab = NULL;
+static section_t *section_list = NULL;
+static unsigned int section_count = 0;
 struct Elf *elf = NULL;
 
-int sym_sort_cmp(void *a, void *b)
+static section_t *sym_addr_section(
+    unsigned long long addr, unsigned long long size)
+{
+	for (unsigned int i = 0; i < section_count; i++) {
+		if (addr >= section_list[i].start &&
+		    addr + size <= section_list[i].end) {
+			return &section_list[i];
+		}
+	}
+
+	return NULL;
+}
+
+static int sym_sort_cmp(void *a, void *b)
 {
 	// decreasing order of addresses for easier overlapping interval calc
 	return ((symbol_t *)b)->addr - ((symbol_t *)a)->addr;
@@ -131,6 +146,12 @@ static int handle_dynamic_syms(
 			return -1;
 		}
 
+		// TODO_URGENT: decide on what will be base and addr
+		// read the address stored in the location pointed by
+		// rela_offset + rela_addend that will give the PLT address.
+		unsigned long long base = tracee->va_base;
+		unsigned long long addr = base + rela.r_offset + rela.r_addend;
+
 		symbol_t *new_sym = calloc(1, sizeof(*new_sym));
 		if (!new_sym) {
 			pr_err("calloc for sym failed: %s", strerror(errno));
@@ -139,13 +160,12 @@ static int handle_dynamic_syms(
 
 		// dynamic symbols, file_name will be set after address gets
 		// resolved.
-		SHERLOCK_SYMBOL_DYN(new_sym, tracee->va_base,
-		    tracee->va_base + rela.r_offset + rela.r_addend, name,
-		    plt_patch);
+		SHERLOCK_SYMBOL_DYN(new_sym, base, addr, name, plt_patch);
 
 		pr_debug("[dynamic symbol] name=%s, addr=%#llx, "
-			 "base=%#llx",
-		    new_sym->name, new_sym->addr, new_sym->base);
+			 "base=%#llx, section=%s",
+		    new_sym->name, new_sym->addr, new_sym->base,
+		    new_sym->section->name);
 	}
 
 	return 0;
@@ -194,6 +214,11 @@ static int handle_static_syms(
 			continue;
 		}
 
+		// skip undefined section index
+		if (sym.st_shndx == SHN_UNDEF) {
+			continue;
+		}
+
 		const char *name = elf_strptr(elf, strtab_idx, sym.st_name);
 		if (name == NULL || name[0] == '\0') {
 			pr_err("static symbol name not present");
@@ -208,7 +233,7 @@ static int handle_static_syms(
 
 		// static symbols
 		SHERLOCK_SYMBOL_STATIC(new_sym, tracee->va_base,
-		    tracee->va_base + sym.st_value, sym.st_size, name, NULL);
+		    tracee->va_base + sym.st_value, sym.st_size, name);
 
 		// according to the manpage, the file name is
 		// only for STB_LOCAL bindings
@@ -216,9 +241,9 @@ static int handle_static_syms(
 			new_sym->file_name = file_name;
 
 		pr_debug("[symbol] name=%s, size=%#llx, addr=%#llx, "
-			 "base=%#llx, file_name=%s",
+			 "base=%#llx, file_name=%s, section=%s",
 		    new_sym->name, new_sym->size, new_sym->addr, new_sym->base,
-		    new_sym->file_name);
+		    new_sym->file_name, new_sym->section->name);
 	}
 
 	return 0;
@@ -273,8 +298,8 @@ int sym_setup(tracee_t *tracee)
 	Elf_Scn *scn = NULL;
 	Elf64_Shdr *hdr = NULL;
 
-	unsigned long plt_base = 0;
-	unsigned long plt_sec_base = 0;
+	// Build section map
+	unsigned int idx = 0;
 	while ((scn = elf_nextscn(elf, scn)) != NULL) {
 		if ((hdr = elf64_getshdr(scn)) == NULL) {
 			pr_err("error in elf64_getshdr(): %s",
@@ -284,13 +309,41 @@ int sym_setup(tracee_t *tracee)
 
 		char *name = elf_strptr(elf, shstr_indx, hdr->sh_name);
 
-		if (MATCH_STR(name, .plt.sec)) {
-			plt_sec_base = hdr->sh_addr;
+		// don't want unallocated secitons in the list
+		if (hdr->sh_addr == 0UL || hdr->sh_size == 0UL) {
+			continue;
 		}
 
-		if (MATCH_STR(name, .plt)) {
-			plt_base = hdr->sh_addr;
+		section_t *t =
+		    realloc(section_list, (idx + 1) * sizeof(section_t));
+		if (t == NULL) {
+			pr_err("error in realloc: %s", strerror(errno));
+			goto sec_out;
+		} else {
+			section_list = t;
 		}
+
+		section_list[idx].start = tracee->va_base + hdr->sh_addr;
+		section_list[idx].end = section_list[idx].start + hdr->sh_size;
+		section_list[idx].name = name;
+		pr_debug("[section] name=%s, start=%#llx, end=%#llx",
+		    section_list[idx].name, section_list[idx].start,
+		    section_list[idx].end);
+
+		++idx;
+	}
+	section_count = idx;
+
+	scn = NULL;
+	hdr = NULL;
+	while ((scn = elf_nextscn(elf, scn)) != NULL) {
+		if ((hdr = elf64_getshdr(scn)) == NULL) {
+			pr_err("error in elf64_getshdr(): %s",
+			    elf_errmsg(elf_errno()));
+			continue;
+		}
+
+		char *name = elf_strptr(elf, shstr_indx, hdr->sh_name);
 
 		if (hdr->sh_type == SHT_RELA) {
 			if (handle_dynamic_syms(tracee, elf, scn, hdr) == -1) {
@@ -324,6 +377,12 @@ int sym_setup(tracee_t *tracee)
 syms_out:
 	if (sherlock_symtab != NULL) {
 		sym_freeall();
+	}
+
+sec_out:
+	if (section_list != NULL) {
+		free(section_list);
+		section_list = NULL;
 	}
 elf_out:
 	elf_end(elf);
@@ -367,17 +426,8 @@ symbol_t *sym_lookup_addr(
 			}
 		} else {
 			// for dyamic, size is 0, we need to check addr >= addr
-			// and in the same memory map
-			mem_map_t *map = sym->map;
-			if (!map) {
-				pr_warn("could not fetch the memory map for "
-					"symbol(%s)",
-				    sym->name);
-				continue;
-			}
-
-			// TODO: instead of map->end, make it section wise
-			if (addr >= sym->addr && addr <= map->end) {
+			// and in the same memory section
+			if (addr >= sym->addr && addr <= sym->section->end) {
 				return sym;
 			}
 		}
@@ -391,6 +441,11 @@ void sym_cleanup(__attribute__((unused)) tracee_t *tracee)
 	pr_debug("sym cleanup");
 	if (sherlock_symtab != NULL) {
 		sym_freeall();
+	}
+
+	if (section_list != NULL) {
+		free(section_list);
+		section_list = NULL;
 	}
 
 	if (elf != NULL) {
