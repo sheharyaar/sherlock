@@ -40,16 +40,14 @@ static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
 {
 	// do a symbol lookup;
 	unsigned long long func_addr = 0;
-	symbol_t **sym_list = NULL;
-	symbol_t *sym = NULL;
 
-	int count = sym_lookup(func, &sym_list);
-	if (count == -1) {
-		pr_err("error in symbol lookup");
+	if (func == NULL || func[0] == '\0') {
+		pr_err("invalid name to sym_lookup");
 		return TRACEE_STOPPED;
 	}
 
-	if (count == 0) {
+	symbol_t *sym = sym_lookup(func);
+	if (sym == NULL) {
 		pr_info_raw("function '%s' is not yet defined.\n"
 			    "Make breakpoint pending on future shared "
 			    "library load? (y or [n]) ",
@@ -59,46 +57,19 @@ static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
 		scanf("%c", &inp);
 		if (inp != 'Y' && inp != 'y') {
 			pr_info_raw("not adding breakpoint\n");
-			goto err_list;
+			return TRACEE_STOPPED;
 		}
 
 		// TODO_LATER: yet to be implemented
 		// TODO_LATER: fix double >dbg prompt
 		pr_warn("feature not implemented yet");
-		goto err_list;
+		return TRACEE_STOPPED;
 	}
 
-	// only one symbol (no conflicts)
-	if (count == 1) {
-		sym = sym_list[0];
-		goto call_add;
-	}
-
-	pr_info_raw("The function matches the following symbols:\n");
-	for (int i = 0; i < count; i++) {
-		pr_info_raw("[%d] addr=%llx", i, sym_list[i]->addr);
-	}
-	pr_info_raw("Enter the index for which you want to "
-		    "select the breakpoint: ");
-
-	int input = -1;
-	scanf("%d", &input);
-	if (input < 0 || input >= count) {
-		pr_info_raw("invalid index selected, skipping");
-		goto err_list;
-	}
-	sym = sym_list[input];
-
-call_add:
 	func_addr = sym->addr;
-	free(sym_list);
 	if (breakpoint_add(tracee, func_addr, sym) == -1)
 		return TRACEE_ERR;
 
-	return TRACEE_STOPPED;
-
-err_list:
-	free(sym_list);
 	return TRACEE_STOPPED;
 }
 

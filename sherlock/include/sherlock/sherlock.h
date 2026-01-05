@@ -13,6 +13,7 @@
 #include <sherlock/log.h>
 #include <libunwind-ptrace.h>
 #include <stdbool.h>
+#include <sherlock/uthash.h>
 
 #define SHERLOCK_MAX_STRLEN 256
 
@@ -64,6 +65,7 @@ typedef struct SYMBOL {
 	const char *name;
 	const char *file_name;
 	struct SYMBOL *next;
+	UT_hash_handle hh;
 	bool dyn_sym;
 	// TODO_LATER: duplicate symbols can cause incorrect PEEKTEXT, POKETEXT
 	bool plt_patch;

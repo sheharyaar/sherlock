@@ -44,6 +44,7 @@ static void exit_handler(void)
 {
 	pr_info("triggering exit handler");
 	// breakpoint_cleanup(&global_tracee);
+	breakpoint_cleanup(&global_tracee);
 	sym_cleanup(&global_tracee);
 	action_cleanup(&global_tracee);
 	tracee_cleanup(&global_tracee);

@@ -14,14 +14,18 @@
 static symbol_t *sherlock_symtab = NULL;
 struct Elf *elf = NULL;
 
+int sym_sort_cmp(void *a, void *b)
+{
+	return ((symbol_t *)a)->addr - ((symbol_t *)b)->addr;
+}
+
 static void sym_freeall(void)
 {
-	symbol_t *s = sherlock_symtab;
-	symbol_t *t = NULL;
-	while (s != NULL) {
-		t = s;
-		s = s->next;
-		free(t);
+	symbol_t *sym, *tmp;
+	HASH_ITER(hh, sherlock_symtab, sym, tmp)
+	{
+		HASH_DEL(sherlock_symtab, sym);
+		free(sym);
 	}
 
 	sherlock_symtab = NULL;
@@ -29,9 +33,10 @@ static void sym_freeall(void)
 
 void sym_printall()
 {
-	symbol_t *s = sherlock_symtab;
+	symbol_t *s, *tmp;
 	int i = 0;
-	while (s != NULL) {
+	HASH_ITER(hh, sherlock_symtab, s, tmp)
+	{
 		pr_info_raw(
 		    "[%d] name=%s, addr=%#llx, base=%#llx, file_name=%s\n", i,
 		    s->name, s->addr, s->base, s->file_name);
@@ -138,8 +143,8 @@ static int handle_dynamic_syms(
 		    tracee->va_base + rela.r_offset + rela.r_addend, name,
 		    plt_patch);
 
-		new_sym->next = sherlock_symtab;
-		sherlock_symtab = new_sym;
+		HASH_ADD_KEYPTR(hh, sherlock_symtab, new_sym->name,
+		    strlen(new_sym->name), new_sym);
 		pr_debug("[dynamic symbol] name=%s, addr=%#llx, "
 			 "base=%#llx",
 		    new_sym->name, new_sym->addr, new_sym->base);
@@ -219,8 +224,8 @@ static int handle_static_syms(
 			}
 		}
 
-		new_sym->next = sherlock_symtab;
-		sherlock_symtab = new_sym;
+		HASH_ADD_KEYPTR(hh, sherlock_symtab, new_sym->name,
+		    strlen(new_sym->name), new_sym);
 		pr_debug("[symbol] name=%s, size=%#llx, addr=%#llx, "
 			 "base=%#llx, file_name=%s",
 		    new_sym->name, new_sym->size, new_sym->addr, new_sym->base,
@@ -313,6 +318,17 @@ int sym_setup(tracee_t *tracee)
 		}
 	}
 
+	HASH_SORT(sherlock_symtab, sym_sort_cmp);
+
+#ifdef DEBUG
+	symbol_t *s, *t;
+	HASH_ITER(hh, sherlock_symtab, s, t)
+	{
+		pr_debug("[sort] addr=%#llx, base=%#llx, name=%s", s->addr,
+		    s->base, s->name);
+	}
+#endif
+
 	// cant use elf_end here as the string pointers are in use.
 	return 0;
 
@@ -329,32 +345,11 @@ err:
 	return -1;
 }
 
-int sym_lookup(char *name, symbol_t ***sym_list)
+symbol_t *sym_lookup(char *name)
 {
-	symbol_t *s = sherlock_symtab;
-	symbol_t **s_list = NULL;
-	int count = 0;
-	while (s != NULL) {
-		if (strcmp(s->name, name) == 0) {
-			symbol_t **s_list_tmp =
-			    realloc(s_list, (count + 1) * sizeof(symbol_t *));
-			if (!s_list_tmp) {
-				pr_err("error in realloc: %s", strerror(errno));
-				free(s_list);
-				s_list = NULL;
-				return -1;
-			} else {
-				s_list = s_list_tmp;
-			}
-			// dont need count - 1 as count is incremented later
-			s_list[count] = s;
-			count++;
-		}
-		s = s->next;
-	}
-
-	*sym_list = s_list;
-	return count;
+	symbol_t *s = NULL;
+	HASH_FIND_STR(sherlock_symtab, name, s);
+	return s;
 }
 
 void sym_cleanup(__attribute__((unused)) tracee_t *tracee)
