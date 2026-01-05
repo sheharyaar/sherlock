@@ -21,11 +21,11 @@
 static mem_map_t *memmap_list = NULL;
 unsigned int memmap_idx = 0;
 
-mem_map_t *sym_proc_addr_map(unsigned long long addr)
+mem_map_t *sym_proc_addr_map(unsigned long long addr, unsigned long long size)
 {
 	for (unsigned int i = 0; i < memmap_idx; i++) {
 		if (addr >= memmap_list[i].start &&
-		    addr <= memmap_list[i].end) {
+		    addr + size <= memmap_list[i].end) {
 			return &memmap_list[i];
 		}
 	}

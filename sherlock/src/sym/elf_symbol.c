@@ -16,7 +16,8 @@ struct Elf *elf = NULL;
 
 int sym_sort_cmp(void *a, void *b)
 {
-	return ((symbol_t *)a)->addr - ((symbol_t *)b)->addr;
+	// decreasing order of addresses for easier overlapping interval calc
+	return ((symbol_t *)b)->addr - ((symbol_t *)a)->addr;
 }
 
 static void sym_freeall(void)
@@ -31,7 +32,7 @@ static void sym_freeall(void)
 	sherlock_symtab = NULL;
 }
 
-void sym_printall()
+void sym_printall(__attribute__((unused)) tracee_t *tracee)
 {
 	symbol_t *s, *tmp;
 	int i = 0;
@@ -40,7 +41,6 @@ void sym_printall()
 		pr_info_raw(
 		    "[%d] name=%s, addr=%#llx, base=%#llx, file_name=%s\n", i,
 		    s->name, s->addr, s->base, s->file_name);
-		s = s->next;
 		i++;
 	}
 }
@@ -143,8 +143,6 @@ static int handle_dynamic_syms(
 		    tracee->va_base + rela.r_offset + rela.r_addend, name,
 		    plt_patch);
 
-		HASH_ADD_KEYPTR(hh, sherlock_symtab, new_sym->name,
-		    strlen(new_sym->name), new_sym);
 		pr_debug("[dynamic symbol] name=%s, addr=%#llx, "
 			 "base=%#llx",
 		    new_sym->name, new_sym->addr, new_sym->base);
@@ -214,18 +212,9 @@ static int handle_static_syms(
 
 		// according to the manpage, the file name is
 		// only for STB_LOCAL bindings
-		if (GELF_ST_BIND(sym.st_info) == STB_LOCAL) {
+		if (GELF_ST_BIND(sym.st_info) == STB_LOCAL)
 			new_sym->file_name = file_name;
-		} else {
-			// resolve name based on memory maps
-			mem_map_t *map = sym_proc_addr_map(new_sym->addr);
-			if (map != NULL) {
-				new_sym->file_name = map->path;
-			}
-		}
 
-		HASH_ADD_KEYPTR(hh, sherlock_symtab, new_sym->name,
-		    strlen(new_sym->name), new_sym);
 		pr_debug("[symbol] name=%s, size=%#llx, addr=%#llx, "
 			 "base=%#llx, file_name=%s",
 		    new_sym->name, new_sym->size, new_sym->addr, new_sym->base,
@@ -345,11 +334,56 @@ err:
 	return -1;
 }
 
-symbol_t *sym_lookup(char *name)
+symbol_t *sym_lookup_name(__attribute__((unused)) tracee_t *tracee, char *name)
 {
+	if (name == NULL || name[0] == '\0') {
+		pr_debug("invalid name to sym_lookup_name");
+		return NULL;
+	}
+
 	symbol_t *s = NULL;
+	// TODO_LATER: handle collisions and duplicate names
 	HASH_FIND_STR(sherlock_symtab, name, s);
 	return s;
+}
+
+symbol_t *sym_lookup_addr(
+    __attribute__((unused)) tracee_t *tracee, unsigned long long addr)
+{
+	if (addr == 0) {
+		return NULL;
+	}
+
+	// Handle
+	symbol_t *sym, *tmp;
+	HASH_ITER(hh, sherlock_symtab, sym, tmp)
+	{
+		// for static symbols, size is valid, so for static we can check
+		// if address belongs to [addr, addr+size]
+		if (!sym->dyn_sym) {
+			if (addr >= sym->addr &&
+			    addr <= sym->addr + sym->size) {
+				return sym;
+			}
+		} else {
+			// for dyamic, size is 0, we need to check addr >= addr
+			// and in the same memory map
+			mem_map_t *map = sym->map;
+			if (!map) {
+				pr_warn("could not fetch the memory map for "
+					"symbol(%s)",
+				    sym->name);
+				continue;
+			}
+
+			// TODO: instead of map->end, make it section wise
+			if (addr >= sym->addr && addr <= map->end) {
+				return sym;
+			}
+		}
+	}
+
+	return NULL;
 }
 
 void sym_cleanup(__attribute__((unused)) tracee_t *tracee)

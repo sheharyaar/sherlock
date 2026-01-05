@@ -42,11 +42,11 @@ static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
 	unsigned long long func_addr = 0;
 
 	if (func == NULL || func[0] == '\0') {
-		pr_err("invalid name to sym_lookup");
+		pr_err("invalid name to breakpoint");
 		return TRACEE_STOPPED;
 	}
 
-	symbol_t *sym = sym_lookup(func);
+	symbol_t *sym = sym_lookup_name(tracee, func);
 	if (sym == NULL) {
 		pr_info_raw("function '%s' is not yet defined.\n"
 			    "Make breakpoint pending on future shared "

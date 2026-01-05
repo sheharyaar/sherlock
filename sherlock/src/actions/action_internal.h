@@ -14,11 +14,29 @@
 #include <stdbool.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 
 // Not using strncmp here, as I want to match the complete string, not the pref
 
 #define UNKNOWN_ADDR_STR "??"
 #define MATCH_STR(str_var, str) strcmp(str_var, #str) == 0
+
+#define ARG_TO_ULL(arg, dest)                                                  \
+	do {                                                                   \
+		bool hex = false;                                              \
+		int i = 0;                                                     \
+		while (arg[i]) {                                               \
+			if (isalpha(arg[i])) {                                 \
+				hex = true;                                    \
+				break;                                         \
+			}                                                      \
+			i++;                                                   \
+		}                                                              \
+                                                                               \
+		int base = (hex) ? 16 : 10;                                    \
+		errno = 0;                                                     \
+		dest = strtoull(arg, NULL, base);                              \
+	} while (0)
 
 typedef tracee_state_e (*handler_entity_t)(tracee_t *tracee, char *args);
 typedef bool (*handler_match_t)(char *act);

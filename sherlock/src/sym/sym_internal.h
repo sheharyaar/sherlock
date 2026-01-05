@@ -31,6 +31,18 @@
 		sym->file_name = _file;                                        \
 		sym->dyn_sym = _is_dyn;                                        \
 		sym->plt_patch = _plt_patch;                                   \
+		sym->map = NULL;                                               \
+                                                                               \
+		/* get associated map */                                       \
+		mem_map_t *map =                                               \
+		    sym_proc_addr_map(new_sym->addr, new_sym->size);           \
+		if (map != NULL) {                                             \
+			new_sym->map = map;                                    \
+			new_sym->file_name = map->path;                        \
+		}                                                              \
+                                                                               \
+		HASH_ADD_KEYPTR(hh, sherlock_symtab, new_sym->name,            \
+		    strlen(new_sym->name), new_sym);                           \
 	} while (0)
 
 #define SHERLOCK_SYMBOL_STATIC(sym, _base, _addr, _size, _name, _file)         \
@@ -40,6 +52,6 @@
 	SHERLOCK_SYMBOL(sym, _base, _addr, 0UL, _name, NULL, true, _plt_patch)
 
 void proc_cleanup(tracee_t *tracee);
-mem_map_t *sym_proc_addr_map(unsigned long long addr);
+mem_map_t *sym_proc_addr_map(unsigned long long addr, unsigned long long size);
 
 #endif

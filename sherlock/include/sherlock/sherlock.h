@@ -27,6 +27,7 @@ typedef enum {
 
 typedef enum ENTITY_E {
 	ENTITY_FUNCTION,
+	ENTITY_FUNCTIONS,
 	ENTITY_VARIABLE,
 	ENTITY_ADDRESS,
 	ENTITY_LINE,
@@ -55,6 +56,13 @@ typedef enum ACTION_E {
 	ACTION_COUNT,
 } action_e;
 
+// TODO: pointer to section list ?
+typedef struct MEM_MAP {
+	unsigned long long start;
+	unsigned long long end;
+	char path[SHERLOCK_MAX_STRLEN];
+} mem_map_t;
+
 typedef struct SYMBOL {
 	// (elf) addr = va_base + rel_addr + rel_addend
 	unsigned long long addr;
@@ -64,7 +72,7 @@ typedef struct SYMBOL {
 	unsigned long long size;
 	const char *name;
 	const char *file_name;
-	struct SYMBOL *next;
+	mem_map_t *map;
 	UT_hash_handle hh;
 	bool dyn_sym;
 	// TODO_LATER: duplicate symbols can cause incorrect PEEKTEXT, POKETEXT
@@ -79,12 +87,6 @@ typedef struct BREAKPOINT {
 	unsigned int idx;
 	unsigned int counter;
 } breakpoint_t;
-
-typedef struct MEM_MAP {
-	unsigned long long start;
-	unsigned long long end;
-	char path[SHERLOCK_MAX_STRLEN];
-} mem_map_t;
 
 typedef struct TRACEE {
 	pid_t pid;

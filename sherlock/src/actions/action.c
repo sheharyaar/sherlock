@@ -14,6 +14,7 @@
 
 static const char *entity_str[ENTITY_COUNT] = {
 	[ENTITY_FUNCTION] = "func",
+	[ENTITY_FUNCTIONS] = "funcs",
 	[ENTITY_VARIABLE] = "var",
 	[ENTITY_ADDRESS] = "addr",
 	[ENTITY_LINE] = "line",

@@ -8,7 +8,6 @@
  */
 
 #include "action_internal.h"
-#include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -44,15 +43,6 @@
 		}                                                              \
 	} while (0)
 
-static tracee_state_e print_func(__attribute__((unused)) tracee_t *tracee,
-    __attribute__((unused)) char *func)
-{
-	// TODO: print function (symbol)
-	// here we would require GOT resolution and memory map mapping
-	pr_info_raw("unimplemented");
-	return TRACEE_STOPPED;
-}
-
 static tracee_state_e print_addr(tracee_t *tracee, char *addr)
 {
 	if (addr == NULL) {
@@ -61,29 +51,14 @@ static tracee_state_e print_addr(tracee_t *tracee, char *addr)
 	}
 
 	// need to check this later, since PEEK* can return -1 as the value
-	bool hex = false;
-	long data;
 	unsigned long long raddr;
-
-	// check for alphabets
-	int i = 0;
-	while (addr[i]) {
-		if (isalpha(addr[i])) {
-			hex = true;
-			break;
-		}
-		i++;
-	}
-
-	int base = (hex) ? 16 : 10;
-	errno = 0;
-	raddr = strtoull(addr, NULL, base);
+	ARG_TO_ULL(addr, raddr);
 	if (errno != 0) {
 		pr_err("invalid address passed, only decimal/hex supported");
 		return TRACEE_STOPPED;
 	}
 
-	data = ptrace(PTRACE_PEEKDATA, tracee->pid, raddr, NULL);
+	long data = ptrace(PTRACE_PEEKDATA, tracee->pid, raddr, NULL);
 	if (data == -1 && errno != 0) {
 		// some error occured
 		if (errno == EIO || errno == EFAULT) {
@@ -189,7 +164,6 @@ static action_t action_print = {
 	.ent_handler = {
 		[ENTITY_REGISTER] = print_reg,
 		[ENTITY_ADDRESS] = print_addr,
-		[ENTITY_FUNCTION] = print_func,
 	},
 	.match_action = match_print,
 	.name = "print",
