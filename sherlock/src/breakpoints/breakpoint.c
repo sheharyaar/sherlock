@@ -49,11 +49,11 @@ int breakpoint_add(tracee_t *tracee, unsigned long long bpaddr, symbol_t *sym)
 	bp->idx = 0;
 	bp->counter = 0;
 	bp->sym = sym;
-	if (tracee->bp) {
-		bp->idx = tracee->bp->idx + 1;
+	if (tracee->bp_list) {
+		bp->idx = tracee->bp_list->idx + 1;
 	}
-	bp->next = tracee->bp;
-	tracee->bp = bp;
+	bp->next = tracee->bp_list;
+	tracee->bp_list = bp;
 
 	unsigned long val = (data & 0xFFFFFFFFFFFFFF00UL) | 0xCCUL;
 	if (ptrace(PTRACE_POKETEXT, tracee->pid, bpaddr, val) == -1) {
@@ -80,15 +80,51 @@ static void breakpoint_print(breakpoint_t *bp)
 
 void breakpoint_printall(tracee_t *tracee)
 {
-	breakpoint_t *bp = tracee->bp;
+	breakpoint_t *bp = tracee->bp_list;
 	while (bp) {
-		symbol_t *sym = sym_lookup_addr(tracee, bp->addr);
 		pr_info_raw("[%d]: name=%s, address=%#llx, hit_count=%d\n",
-		    bp->idx, sym == NULL ? "??" : sym->name, bp->addr,
+		    bp->idx, bp->sym == NULL ? "??" : bp->sym->name, bp->addr,
 		    bp->counter);
 		pr_debug("value: %#lx", bp->value);
 		bp = bp->next;
 	}
+}
+
+int breakpoint_resume(tracee_t *tracee)
+{
+	// nothing to do
+	if (tracee->pending_bp == NULL) {
+		return 0;
+	}
+
+	breakpoint_t *bp = tracee->pending_bp;
+	// single step and reset
+	if (ptrace(PTRACE_SINGLESTEP, tracee->pid, NULL, NULL) == -1) {
+		pr_err("error in breakpoint singleste: %s", strerror(errno));
+		return -1;
+	}
+
+	int wstatus = 0;
+	if (waitpid(tracee->pid, &wstatus, 0) < 0) {
+		pr_err("waitpid err: %s", strerror(errno));
+		return -1;
+	}
+
+	if (!WIFSTOPPED(wstatus)) {
+		pr_err("not stopped by SIGSTOP");
+		return -1;
+	}
+
+	// restore the breakpoint
+	unsigned long long val = (bp->value & 0xFFFFFFFFFFFFFF00UL) | 0xCCUL;
+	if (ptrace(PTRACE_POKETEXT, tracee->pid, bp->addr, val) == -1) {
+		pr_err("breakpoint_handle: error in PTRACE_POKETEXT- %s",
+		    strerror(errno));
+		return -1;
+	}
+
+	tracee->pending_bp = NULL;
+	return 0;
 }
 
 int breakpoint_handle(tracee_t *tracee)
@@ -101,7 +137,7 @@ int breakpoint_handle(tracee_t *tracee)
 	}
 
 	bool found = false;
-	breakpoint_t *bp = tracee->bp;
+	breakpoint_t *bp = tracee->bp_list;
 	while (bp) {
 		if (bp->addr + 1 == regs.rip) {
 			found = true;
@@ -110,6 +146,8 @@ int breakpoint_handle(tracee_t *tracee)
 
 		bp = bp->next;
 	}
+
+	pr_debug("rip1=%#llx", regs.rip);
 
 	// replace the change text and reset the rip
 	if (found) {
@@ -128,47 +166,24 @@ int breakpoint_handle(tracee_t *tracee)
 			    strerror(errno));
 			return -1;
 		}
-
-		// single step and reset
-		if (ptrace(PTRACE_SINGLESTEP, tracee->pid, NULL, NULL) == -1) {
-			pr_err("error in breakpoint singleste: %s",
-			    strerror(errno));
-			return -1;
-		}
-
-		int wstatus = 0;
-		if (waitpid(tracee->pid, &wstatus, 0) < 0) {
-			pr_err("waitpid err: %s", strerror(errno));
-			return -1;
-		}
-
-		if (!WIFSTOPPED(wstatus)) {
-			pr_err("not stopped by SIGSTOP");
-			return -1;
-		}
-
-		// restore the breakpoint
-		val = (bp->value & 0xFFFFFFFFFFFFFF00UL) | 0xCCUL;
-		if (ptrace(PTRACE_POKETEXT, tracee->pid, bp->addr, val) == -1) {
-			pr_err(
-			    "breakpoint_handle: error in PTRACE_POKETEXT- %s",
-			    strerror(errno));
-			return -1;
-		}
+		pr_debug("rip2=%#llx", regs.rip);
+	} else {
+		pr_debug("no breakpoint found for addr: %lld", regs.rip);
 	}
 
+	pr_debug("rip3=%#llx", regs.rip);
 	return 0;
 }
 
 void breakpoint_cleanup(tracee_t *tracee)
 {
 	pr_debug("breakpoint cleanup");
-	breakpoint_t *bp = tracee->bp;
+	breakpoint_t *bp = tracee->bp_list;
 	breakpoint_t *t = NULL;
 	while (bp != NULL) {
 		t = bp;
 		bp = bp->next;
 		free(t);
 	}
-	tracee->bp = NULL;
+	tracee->bp_list = NULL;
 }

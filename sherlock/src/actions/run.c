@@ -8,10 +8,18 @@
  */
 
 #include "action_internal.h"
+#include <sherlock/breakpoint.h>
 #include <sys/ptrace.h>
 
 static tracee_state_e run(tracee_t *tracee, __attribute__((unused)) char *args)
 {
+	if (tracee->pending_bp) {
+		if (breakpoint_resume(tracee) == -1) {
+			pr_err("error when running tracee (breakpoint_resume)");
+			return TRACEE_ERR;
+		}
+	}
+
 	if (ptrace(PTRACE_CONT, tracee->pid, NULL, 0) == -1) {
 		pr_err("error in ptrace: %s", strerror(errno));
 		return TRACEE_ERR;

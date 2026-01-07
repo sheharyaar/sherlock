@@ -29,12 +29,13 @@
 	} while (0)
 
 static tracee_t global_tracee = {
-	.bp = NULL,
+	.bp_list = NULL,
 	.exe_path = { 0 },
 	.name = { 0 },
 	.pid = 0,
 	.unw_addr = NULL,
 	.va_base = 0,
+	.pending_bp = NULL,
 };
 
 static pid_t sherlock_pid = 0;
@@ -185,6 +186,11 @@ int main(int argc, char *argv[])
 			if (waitpid(global_tracee.pid, &wstatus, 0) < 0) {
 				pr_err("waitpid err: %s", strerror(errno));
 				goto cleanup_unw;
+			}
+
+			if (WIFEXITED(wstatus)) {
+				pr_info("tracee exited");
+				return 0;
 			}
 
 			if (WIFSTOPPED(wstatus)) {
