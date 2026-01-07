@@ -72,8 +72,8 @@ static int handle_dynamic_syms(__attribute__((unused)) tracee_t *tracee,
 	// (symtab_hdr->link)
 	unsigned long symtab_idx = hdr->sh_link;
 	if (symtab_idx == 0) {
-		pr_err("invalid symtan for dynamic section");
-		return -1;
+		// this is probably a static binary
+		return 0;
 	}
 
 	Elf_Scn *symtab_scn = elf_getscn(elf, symtab_idx);
