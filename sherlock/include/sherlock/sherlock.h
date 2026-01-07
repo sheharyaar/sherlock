@@ -82,7 +82,6 @@ typedef struct SYMBOL {
 	UT_hash_handle hh;
 	bool dyn_sym;
 	// TODO_LATER: duplicate symbols can cause incorrect PEEKTEXT, POKETEXT
-	bool plt_patch;
 } symbol_t;
 
 typedef struct BREAKPOINT {

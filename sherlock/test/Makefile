@@ -2,12 +2,13 @@
 CC := gcc
 SRC := test.c
 
-CFLAGS_BASE := -O0 -fno-omit-frame-pointer
+CFLAGS_BASE :=
 LDFLAGS_BASE :=
 
 # Baseline (lazy PLT)
 t-baseline: $(SRC)
-	$(CC) $(CFLAGS_BASE) -no-pie \
+	$(CC) $(CFLAGS_BASE) -fcf-protection=none \
+		-Wl,-z,lazy \
 		$(SRC) -o $@ $(LDFLAGS_BASE)
 
 # Full RELRO (eager binding)

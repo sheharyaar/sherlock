@@ -10,10 +10,14 @@
 #include "sym_internal.h"
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/ptrace.h>
 
 static symbol_t *sherlock_symtab = NULL;
 static section_t *section_list = NULL;
 static unsigned int section_count = 0;
+static bool plt_sec = false;
+static unsigned long long plt_ent_start = 0UL;
+static unsigned long long plt_entsize = 0UL;
 struct Elf *elf = NULL;
 
 static section_t *sym_addr_section(
@@ -60,8 +64,8 @@ void sym_printall(__attribute__((unused)) tracee_t *tracee)
 	}
 }
 
-static int handle_dynamic_syms(
-    tracee_t *tracee, Elf *elf, Elf_Scn *scn, Elf64_Shdr *hdr)
+static int handle_dynamic_syms(__attribute__((unused)) tracee_t *tracee,
+    Elf *elf, Elf_Scn *scn, Elf64_Shdr *hdr)
 {
 	// iterate over RELA, for each RELA entry check the symtab
 	// (hdr->link) and the corresponding strtab for symbol name
@@ -125,16 +129,19 @@ static int handle_dynamic_syms(
 			continue;
 		}
 
-		bool plt_patch = false;
+		unsigned long long base = 0UL;
+		unsigned long long addr = 0UL;
 		if (GELF_R_TYPE(rela.r_info) == R_X86_64_JUMP_SLOT) {
-			// Patching + Resolve Probing would happen only when
-			// breakpoint will be added via 'break func <symbol>'
-			// and before resoltion happens. After the resolution
-			// subsequent breaks will be added directly to the value
-			// in GOT.
-			plt_patch = true;
+			// TODO: fix the base here
+			addr = plt_ent_start + plt_entsize * i;
+		} else if (GELF_R_TYPE(rela.r_info) == R_X86_64_GLOB_DAT) {
+			// TODO: the GOT address here will be 0, unless its
+			// loaded.
+			pr_err("skipping R_X86_64_GLOB_DAT for now");
+			continue;
+			;
 		} else {
-			// TODO: implement R_X86_64_GLOB_DAT or RELATIVE
+			// TODO: implement  RELATIVE
 			pr_err("type: %ld not implemented",
 			    GELF_R_TYPE(rela.r_info));
 			continue;
@@ -146,21 +153,15 @@ static int handle_dynamic_syms(
 			return -1;
 		}
 
-		// TODO_URGENT: decide on what will be base and addr
-		// read the address stored in the location pointed by
-		// rela_offset + rela_addend that will give the PLT address.
-		unsigned long long base = tracee->va_base;
-		unsigned long long addr = base + rela.r_offset + rela.r_addend;
-
 		symbol_t *new_sym = calloc(1, sizeof(*new_sym));
 		if (!new_sym) {
 			pr_err("calloc for sym failed: %s", strerror(errno));
 			return -1;
 		}
 
-		// dynamic symbols, file_name will be set after address gets
-		// resolved.
-		SHERLOCK_SYMBOL_DYN(new_sym, base, addr, name, plt_patch);
+		// dynamic symbols, file_name will be set after address
+		// gets resolved.
+		SHERLOCK_SYMBOL_DYN(new_sym, base, addr, name);
 
 		pr_debug("[dynamic symbol] name=%s, addr=%#llx, "
 			 "base=%#llx, section=%s",
@@ -284,12 +285,14 @@ int sym_setup(tracee_t *tracee)
 		goto elf_out;
 	}
 
-	// IMP: If the type of ELF is EXEC, then va_base will be 0 (No ASLR)
+	// IMP: If the type of ELF is EXEC, then va_base will be 0 (No
+	// ASLR)
 	if (elf_hdr->e_type == ET_EXEC) {
 		tracee->va_base = 0UL;
 	} else {
 		if (elf_hdr->e_type != ET_DYN) {
-			pr_err("this binary is neither EXEC or DYN type, other "
+			pr_err("this binary is neither EXEC or DYN "
+			       "type, other "
 			       "types are not supported as of now");
 			goto elf_out;
 		}
@@ -297,6 +300,12 @@ int sym_setup(tracee_t *tracee)
 
 	Elf_Scn *scn = NULL;
 	Elf64_Shdr *hdr = NULL;
+	Elf_Scn *symtab_scn = NULL;
+	Elf64_Shdr *symtab_hdr = NULL;
+	Elf_Scn *rela_dyn_scn = NULL;
+	Elf64_Shdr *rela_dyn_hdr = NULL;
+	Elf_Scn *rela_plt_scn = NULL;
+	Elf64_Shdr *rela_plt_hdr = NULL;
 
 	// Build section map
 	unsigned int idx = 0;
@@ -312,6 +321,38 @@ int sym_setup(tracee_t *tracee)
 		// don't want unallocated secitons in the list
 		if (hdr->sh_addr == 0UL || hdr->sh_size == 0UL) {
 			continue;
+		}
+
+		if (MATCH_STR(name, .plt.sec)) {
+			plt_sec = true;
+			// skip one entry of the trampoline;
+			plt_entsize = hdr->sh_entsize;
+			// plt.sec does not have the trampoline
+			plt_ent_start = tracee->va_base + hdr->sh_addr;
+		}
+
+		if (MATCH_STR(name, .plt)) {
+			if (!plt_sec) {
+				// skip one entry of the trampoline;
+				plt_entsize = hdr->sh_entsize;
+				plt_ent_start = tracee->va_base + hdr->sh_addr +
+				    hdr->sh_entsize;
+			}
+		}
+
+		if (MATCH_STR(name, .rela.dyn)) {
+			rela_dyn_scn = scn;
+			rela_dyn_hdr = hdr;
+		}
+
+		if (MATCH_STR(name, .rela.plt)) {
+			rela_plt_scn = scn;
+			rela_plt_hdr = hdr;
+		}
+
+		if (MATCH_STR(name, .symtab)) {
+			symtab_scn = scn;
+			symtab_hdr = hdr;
 		}
 
 		section_t *t =
@@ -334,29 +375,27 @@ int sym_setup(tracee_t *tracee)
 	}
 	section_count = idx;
 
-	scn = NULL;
-	hdr = NULL;
-	while ((scn = elf_nextscn(elf, scn)) != NULL) {
-		if ((hdr = elf64_getshdr(scn)) == NULL) {
-			pr_err("error in elf64_getshdr(): %s",
-			    elf_errmsg(elf_errno()));
-			continue;
+	if (symtab_scn) {
+		if (handle_static_syms(tracee, elf, symtab_scn, symtab_hdr) ==
+		    -1) {
+			pr_err("handling symtab failed");
+			goto syms_out;
 		}
+	}
 
-		char *name = elf_strptr(elf, shstr_indx, hdr->sh_name);
-
-		if (hdr->sh_type == SHT_RELA) {
-			if (handle_dynamic_syms(tracee, elf, scn, hdr) == -1) {
-				pr_err("handling symtab failed");
-				goto syms_out;
-			}
+	if (rela_dyn_scn) {
+		if (handle_dynamic_syms(
+			tracee, elf, rela_dyn_scn, rela_dyn_hdr) == -1) {
+			pr_err("handling rela_dyn failed");
+			goto syms_out;
 		}
+	}
 
-		if (MATCH_STR(name, .symtab)) {
-			if (handle_static_syms(tracee, elf, scn, hdr) == -1) {
-				pr_err("handling symtab failed");
-				goto syms_out;
-			}
+	if (rela_plt_scn) {
+		if (handle_dynamic_syms(
+			tracee, elf, rela_plt_scn, rela_plt_hdr) == -1) {
+			pr_err("handling rela_plt failed");
+			goto syms_out;
 		}
 	}
 
@@ -417,16 +456,16 @@ symbol_t *sym_lookup_addr(
 	symbol_t *sym, *tmp;
 	HASH_ITER(hh, sherlock_symtab, sym, tmp)
 	{
-		// for static symbols, size is valid, so for static we can check
-		// if address belongs to [addr, addr+size]
+		// for static symbols, size is valid, so for static we
+		// can check if address belongs to [addr, addr+size]
 		if (!sym->dyn_sym) {
 			if (addr >= sym->addr &&
 			    addr <= sym->addr + sym->size) {
 				return sym;
 			}
 		} else {
-			// for dyamic, size is 0, we need to check addr >= addr
-			// and in the same memory section
+			// for dyamic, size is 0, we need to check addr
+			// >= addr and in the same memory section
 			if (addr >= sym->addr && addr <= sym->section->end) {
 				return sym;
 			}

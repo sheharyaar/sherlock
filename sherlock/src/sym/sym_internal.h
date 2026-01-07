@@ -19,7 +19,7 @@
 
 #define MATCH_STR(str_var, str) strcmp(str_var, #str) == 0
 
-#define SHERLOCK_SYMBOL(_sym, _base, _addr, _size, _name, _is_dyn, _plt_patch) \
+#define SHERLOCK_SYMBOL(_sym, _base, _addr, _size, _name, _is_dyn)             \
 	do {                                                                   \
 		_sym->base = _base;                                            \
 		_sym->addr = _addr;                                            \
@@ -29,7 +29,6 @@
 		_sym->name = _name;                                            \
 		_sym->file_name = NULL;                                        \
 		_sym->dyn_sym = _is_dyn;                                       \
-		_sym->plt_patch = _plt_patch;                                  \
 		_sym->section = NULL;                                          \
 		_sym->map = NULL;                                              \
                                                                                \
@@ -58,10 +57,10 @@
 	} while (0)
 
 #define SHERLOCK_SYMBOL_STATIC(_sym, _base, _addr, _size, _name)               \
-	SHERLOCK_SYMBOL(_sym, _base, _addr, _size, _name, false, false)
+	SHERLOCK_SYMBOL(_sym, _base, _addr, _size, _name, false)
 
-#define SHERLOCK_SYMBOL_DYN(_sym, _base, _addr, _name, _plt_patch)             \
-	SHERLOCK_SYMBOL(_sym, _base, _addr, 0UL, _name, true, _plt_patch)
+#define SHERLOCK_SYMBOL_DYN(_sym, _base, _addr, _name)                         \
+	SHERLOCK_SYMBOL(_sym, _base, _addr, 0UL, _name, true)
 
 void proc_cleanup(tracee_t *tracee);
 mem_map_t *sym_proc_addr_map(unsigned long long addr, unsigned long long size);
