@@ -15,7 +15,7 @@ static tracee_state_e info_addr(tracee_t *tracee, char *arg)
 {
 	unsigned long long addr = 0;
 	ARG_TO_ULL(arg, addr);
-	if (errno != 0) {
+	if (addr == 0) {
 		pr_err("invalid address passed, only decimal/hex supported");
 		return TRACEE_STOPPED;
 	}

@@ -34,7 +34,6 @@ static tracee_t global_tracee = {
 	.name = { 0 },
 	.pid = 0,
 	.unw_addr = NULL,
-	.unw_context = NULL,
 	.va_base = 0,
 };
 
@@ -105,13 +104,6 @@ static int setup(int argc, char *argv[], tracee_t *tracee)
 static int setup_libunwind(tracee_t *tracee)
 {
 	tracee->unw_addr = unw_create_addr_space(&_UPT_accessors, 0);
-	tracee->unw_context = _UPT_create(tracee->pid);
-	if (unw_init_remote(&tracee->unw_cursor, tracee->unw_addr,
-		tracee->unw_context) != 0) {
-		pr_err("cannot initialize cursor for remote unwinding\n");
-		return -1;
-	}
-
 	return 0;
 }
 
@@ -217,9 +209,9 @@ int main(int argc, char *argv[])
 	return 0;
 
 cleanup_unw:
-	_UPT_destroy(global_tracee.unw_context);
-	global_tracee.unw_context = NULL;
-	unw_destroy_addr_space(global_tracee.unw_addr);
-	global_tracee.unw_addr = NULL;
+	if (global_tracee.unw_addr != NULL) {
+		unw_destroy_addr_space(global_tracee.unw_addr);
+		global_tracee.unw_addr = NULL;
+	}
 	return 1;
 }

@@ -23,9 +23,10 @@ static tracee_state_e breakpoint_addr(tracee_t *tracee, char *addr)
 {
 	errno = 0;
 	// the address has to be in hex format
-	unsigned long long bpaddr = strtoull(addr, NULL, 16);
-	if (errno != 0) {
-		pr_err("invalid address passed, only hex supported");
+	unsigned long long bpaddr = 0;
+	ARG_TO_ULL(addr, bpaddr);
+	if (bpaddr == 0) {
+		pr_err("invalid address passed");
 		return TRACEE_STOPPED;
 	}
 

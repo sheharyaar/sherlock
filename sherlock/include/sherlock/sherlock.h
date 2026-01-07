@@ -99,8 +99,6 @@ typedef struct TRACEE {
 	breakpoint_t *bp;
 	unsigned long long va_base;
 	unw_addr_space_t unw_addr;
-	void *unw_context;
-	unw_cursor_t unw_cursor;
 	char name[SHERLOCK_MAX_STRLEN];
 	char exe_path[SHERLOCK_MAX_STRLEN];
 } tracee_t;

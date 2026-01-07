@@ -53,7 +53,7 @@ static tracee_state_e print_addr(tracee_t *tracee, char *addr)
 	// need to check this later, since PEEK* can return -1 as the value
 	unsigned long long raddr;
 	ARG_TO_ULL(addr, raddr);
-	if (errno != 0) {
+	if (raddr == 0) {
 		pr_err("invalid address passed, only decimal/hex supported");
 		return TRACEE_STOPPED;
 	}
