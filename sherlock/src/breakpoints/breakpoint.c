@@ -167,11 +167,12 @@ int breakpoint_handle(tracee_t *tracee)
 			return -1;
 		}
 		pr_debug("rip2=%#llx", regs.rip);
+
+		tracee->pending_bp = bp;
 	} else {
 		pr_debug("no breakpoint found for addr: %lld", regs.rip);
 	}
 
-	pr_debug("rip3=%#llx", regs.rip);
 	return 0;
 }
 

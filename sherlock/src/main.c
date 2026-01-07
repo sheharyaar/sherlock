@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <sys/ptrace.h>
 #include <unistd.h>
 
 #define dbg_prompt(str, count)                                                 \
@@ -196,17 +197,32 @@ int main(int argc, char *argv[])
 			if (WIFSTOPPED(wstatus)) {
 				if (WSTOPSIG(wstatus) == SIGTRAP) {
 					// could be a breakpoint stop
-					if (breakpoint_handle(&global_tracee) ==
-					    -1) {
-						pr_err("error in handling "
-						       "SIGTRAP");
+					siginfo_t si;
+					bool single_step = true;
+					if (ptrace(PTRACE_GETSIGINFO,
+						global_tracee.pid, NULL,
+						&si) == -1) {
+						pr_warn("ptrace_getsiginfo "
+							"failed, sending it to "
+							"breakpoint path: %s",
+						    strerror(errno));
+					}
+
+					single_step = si.si_code == TRAP_TRACE;
+					if (!single_step) {
+						if (breakpoint_handle(
+							&global_tracee) == -1) {
+							pr_err(
+							    "error in handling "
+							    "SIGTRAP");
+						}
 					}
 				} else {
 					pr_info_raw(
 					    "tracee received signal: %s\n",
 					    strsignal(WSTOPSIG(wstatus)));
-				}
-			}
+				} /* SIGTRAP if-block*/
+			} /* WIFSTOPPED if-block */
 
 			state = TRACEE_STOPPED;
 		}

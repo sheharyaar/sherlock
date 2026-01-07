@@ -319,9 +319,8 @@ int sym_setup(tracee_t *tracee)
 		char *name = elf_strptr(elf, shstr_indx, hdr->sh_name);
 
 		// don't want unallocated secitons in the list
-		if (hdr->sh_addr == 0UL || hdr->sh_size == 0UL) {
+		if (hdr->sh_type == SHT_NULL)
 			continue;
-		}
 
 		if (MATCH_STR(name, .plt.sec)) {
 			plt_sec = true;
@@ -353,6 +352,11 @@ int sym_setup(tracee_t *tracee)
 		if (MATCH_STR(name, .symtab)) {
 			symtab_scn = scn;
 			symtab_hdr = hdr;
+		}
+
+		// skip non-allocated and 0 address section
+		if (hdr->sh_addr == 0 || hdr->sh_size == 0) {
+			continue;
 		}
 
 		section_t *t =
