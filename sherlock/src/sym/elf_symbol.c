@@ -132,16 +132,16 @@ static int handle_dynamic_syms(__attribute__((unused)) tracee_t *tracee,
 		unsigned long long base = 0UL;
 		unsigned long long addr = 0UL;
 		if (GELF_R_TYPE(rela.r_info) == R_X86_64_JUMP_SLOT) {
-			// TODO: fix the base here
+			// TODO [SYM_RES]: fix the base here
 			addr = plt_ent_start + plt_entsize * i;
 		} else if (GELF_R_TYPE(rela.r_info) == R_X86_64_GLOB_DAT) {
-			// TODO: the GOT address here will be 0, unless its
-			// loaded.
+			// TODO [SYM_RES]: the GOT address here will be 0,
+			// unless its loaded.
 			pr_err("skipping R_X86_64_GLOB_DAT for now");
 			continue;
 			;
 		} else {
-			// TODO: implement  RELATIVE
+			// TODO [SYM_RES]: implement  RELATIVE
 			pr_err("type: %ld not implemented",
 			    GELF_R_TYPE(rela.r_info));
 			continue;
@@ -444,7 +444,7 @@ symbol_t *sym_lookup_name(__attribute__((unused)) tracee_t *tracee, char *name)
 	}
 
 	symbol_t *s = NULL;
-	// TODO_LATER: handle collisions and duplicate names
+	// TODO [LATER]: handle collisions and duplicate names
 	HASH_FIND_STR(sherlock_symtab, name, s);
 	return s;
 }

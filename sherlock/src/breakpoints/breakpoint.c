@@ -16,6 +16,21 @@
 #include <sys/user.h>
 #include <sys/wait.h>
 
+void breakpoint_delete(tracee_t *tracee, unsigned int idx)
+{
+	breakpoint_t **headp = &(tracee->bp_list);
+	breakpoint_t *t = NULL;
+	while (*headp != NULL) {
+		if ((*headp)->idx == idx) {
+			t = *headp;
+			*headp = t->next;
+			free(t);
+			return;
+		}
+		headp = &((*headp)->next);
+	}
+}
+
 int breakpoint_add(tracee_t *tracee, unsigned long long bpaddr, symbol_t *sym)
 {
 
@@ -45,7 +60,7 @@ int breakpoint_add(tracee_t *tracee, unsigned long long bpaddr, symbol_t *sym)
 
 	bp->addr = bpaddr;
 	bp->value = data;
-	bp->idx = 0;
+	bp->idx = 1;
 	bp->counter = 0;
 	bp->sym = sym;
 	if (tracee->bp_list) {

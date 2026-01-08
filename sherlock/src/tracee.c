@@ -106,7 +106,7 @@ int tracee_setup_exec(tracee_t *tracee, char *argv[])
 			_exit(1);
 		}
 
-		// TODO_LATER: Fix pgid and tty ownership
+		// TODO [TTY]: Fix pgid and tty ownership
 		// if (setpgid(0, 0) == -1) {
 		// 	pr_err("error in child setpgid: %s", strerror(errno));
 		// 	_exit(1);

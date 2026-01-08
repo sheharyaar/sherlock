@@ -55,6 +55,7 @@ typedef enum ACTION_E {
 	ACTION_RWATCH,
 	ACTION_THREAD,
 	ACTION_THREAD_APPLY,
+	ACTION_DELETE,
 	ACTION_COUNT,
 } action_e;
 
@@ -83,7 +84,8 @@ typedef struct SYMBOL {
 	mem_map_t *map;
 	UT_hash_handle hh;
 	bool dyn_sym;
-	// TODO_LATER: duplicate symbols can cause incorrect PEEKTEXT, POKETEXT
+	// TODO [SYM_DUP]: duplicate symbols can cause incorrect PEEKTEXT,
+	// POKETEXT
 } symbol_t;
 
 typedef struct BREAKPOINT {

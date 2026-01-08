@@ -34,28 +34,77 @@ long watchpoint_old_values[4] = { 0 };
 #define DR_STATUS 6
 #define DR_CTRL 7
 
-#define DR_LOCAL_BIT(idx) (1ULL << ((idx) * 2))
-#define DR_ON(dr7, idx) ((dr7) & DR_LOCAL_BIT(idx))
-#define DR_SET_ON(dr7, idx) ((dr7) | DR_LOCAL_BIT(idx))
+#define DR7_LOCAL_BIT(idx) (1ULL << ((idx) * 2))
+#define DR7_ON(dr7, idx) ((dr7) & DR7_LOCAL_BIT(idx))
+#define DR7_SET_ON(dr7, idx) ((dr7) | DR7_LOCAL_BIT(idx))
+#define DR7_SET_CLEAR(dr7, idx) ((dr7) & ~(DR7_LOCAL_BIT(idx)))
 
-#define DR_RW_SHIFT(idx) (16 + (idx) * 4)
-#define DR_LEN_SHIFT(idx) (18 + (idx) * 4)
+#define DR7_RW_SHIFT(idx) (16 + (idx) * 4)
+#define DR7_LEN_SHIFT(idx) (18 + (idx) * 4)
 
-#define DR_RW_MASK(idx) (0b11ULL << DR_RW_SHIFT(idx))
-#define DR_LEN_MASK(idx) (0b11ULL << DR_LEN_SHIFT(idx))
+#define DR7_RW_MASK(idx) (0b11ULL << DR7_RW_SHIFT(idx))
+#define DR7_LEN_MASK(idx) (0b11ULL << DR7_LEN_SHIFT(idx))
 
-#define DR_RW(dr7, idx) (((dr7) >> DR_RW_SHIFT(idx)) & 0b11)
-#define DR_LEN(dr7, idx) (((dr7) >> DR_LEN_SHIFT(idx)) & 0b11)
+#define DR7_RW(dr7, idx) (((dr7) >> DR7_RW_SHIFT(idx)) & 0b11)
+#define DR7_LEN(dr7, idx) (((dr7) >> DR7_LEN_SHIFT(idx)) & 0b11)
 
-#define DR_SET_RW(dr7, idx, rw)                                                \
-	(((dr7) & ~DR_RW_MASK(idx)) | ((uint64_t)(rw) << DR_RW_SHIFT(idx)))
+#define DR7_RW_SET(dr7, idx, rw)                                               \
+	(((dr7) & ~DR7_RW_MASK(idx)) | ((uint64_t)(rw) << DR7_RW_SHIFT(idx)))
 
-#define DR_SET_LEN(dr7, idx, len)                                              \
-	(((dr7) & ~DR_LEN_MASK(idx)) | ((uint64_t)(len) << DR_LEN_SHIFT(idx)))
+#define DR7_LEN_SET(dr7, idx, len)                                             \
+	(((dr7) & ~DR7_LEN_MASK(idx)) | ((uint64_t)(len) << DR7_LEN_SHIFT(idx)))
+
+#define DR7_RW_CLEAR(dr7, idx)                                                 \
+	(((dr7) & ~DR7_RW_MASK(idx)) & ~(0b11 << DR7_RW_SHIFT(idx)))
+
+#define DR7_LEN_CLEAR(dr7, idx)                                                \
+	(((dr7) & ~DR7_LEN_MASK(idx)) & ~(0b11 << DR7_LEN_SHIFT(idx)))
+
+void watchpoint_delete(tracee_t *tracee, unsigned int idx)
+{
+	if (idx > 4) {
+		return;
+	}
+
+	watchpoint_old_values[idx] = 0;
+
+	long dr7_data = 0UL;
+	dr7_data =
+	    ptrace(PTRACE_PEEKUSER, tracee->pid, DR_OFFSET(DR_CTRL), NULL);
+	if (dr7_data == -1) {
+		pr_err("error in reading DR[7] reg: %s", strerror(errno));
+		return;
+	}
+
+	if (DR7_ON(dr7_data, idx)) {
+		// clear the DR7 bit for this index
+		pr_debug("curr dr7=%#lx, idx_remove=%d", dr7_data, idx);
+		dr7_data = DR7_LEN_CLEAR(dr7_data, idx);
+		dr7_data = DR7_RW_CLEAR(dr7_data, idx);
+		dr7_data = DR7_SET_CLEAR(dr7_data, idx);
+		pr_debug("new dr7=%#lx", dr7_data);
+
+		if (ptrace(PTRACE_POKEUSER, tracee->pid, DR_OFFSET(DR_CTRL),
+			dr7_data) == -1) {
+			pr_err(
+			    "error in writing DR[7] reg: %s", strerror(errno));
+			return;
+		}
+
+		long clear_data = 0UL;
+		// clear DR[idx] reg
+		if (ptrace(PTRACE_POKEUSER, tracee->pid, DR_OFFSET(idx),
+			clear_data) == -1) {
+			pr_err("wp_delete: error in writing DR[%d] reg: %s",
+			    idx, strerror(errno));
+			return;
+		}
+	}
+}
 
 void watchpoint_printall(tracee_t *tracee)
 {
-	// TODO: print depending on len of watchpoint
+	// TODO [WP_LEN]: print depending on len of watchpoint
 	long data = 0UL;
 	data = ptrace(PTRACE_PEEKUSER, tracee->pid, DR_OFFSET(DR_CTRL), NULL);
 	if (data == -1) {
@@ -67,7 +116,7 @@ void watchpoint_printall(tracee_t *tracee)
 
 	// Check for L0-L3
 	for (int i = 0; i <= 3; i++) {
-		if (DR_ON(data, i)) {
+		if (DR7_ON(data, i)) {
 			// get the watchpoint address and type
 			long dr_data = 0UL;
 			dr_data = ptrace(
@@ -79,15 +128,15 @@ void watchpoint_printall(tracee_t *tracee)
 			}
 
 			const char *rw = NULL;
-			if (DR_RW(data, i) == 0b01) {
+			if (DR7_RW(data, i) == 0b01) {
 				rw = "W";
-			} else if (DR_RW(data, i) == 0b11) {
+			} else if (DR7_RW(data, i) == 0b11) {
 				rw = "RW";
 			} else {
 				rw = "?";
 			}
 
-			int len = DR_LEN(data, i);
+			int len = DR7_LEN(data, i);
 			if (len == 0b00) {
 				len = 1;
 			} else if (len == 0b01) {
@@ -110,7 +159,7 @@ void watchpoint_printall(tracee_t *tracee)
 bool watchpoint_check_print(tracee_t *tracee)
 {
 	pr_debug("checking watchpoint");
-	// TODO: print depending on len of watchpoint
+	// TODO [WP_LEN]: print depending on len of watchpoint
 	long data = 0UL;
 	data = ptrace(PTRACE_PEEKUSER, tracee->pid, DR_OFFSET(DR_STATUS), NULL);
 	if (data == -1) {
@@ -136,10 +185,16 @@ bool watchpoint_check_print(tracee_t *tracee)
 
 	// print the watchpoint
 	long new_val = ptrace(PTRACE_PEEKDATA, tracee->pid, addr, NULL);
-	if (new_val == -1) {
-		pr_err(
-		    "error in getting data at %#lx used by watchpoint(%d): %s",
-		    addr, idx, strerror(errno));
+	if (new_val == -1 && errno != 0) {
+		if (errno == EIO || errno == EFAULT) {
+			pr_info_raw("the requested memory address(%#lx) is "
+				    "not accessible\n",
+			    addr);
+		} else {
+			pr_err("reading the address(%#lx) failed: %s", addr,
+			    strerror(errno));
+		}
+
 		return true;
 	}
 
@@ -150,7 +205,7 @@ bool watchpoint_check_print(tracee_t *tracee)
 		return true;
 	}
 
-	// TODO is the r/w instruction RIP ? Or one instr before RIP ?
+	// TODO [WP_URG]: is the r/w instruction RIP ? Or one instr before RIP ?
 	pr_info_raw(
 	    "Watchpoint %d, old_val=%#lx, new_val=%#lx, rw_instr = %#llx\n",
 	    idx, watchpoint_old_values[idx], new_val, regs.rip);
@@ -167,7 +222,7 @@ int watchpoint_add(tracee_t *tracee, unsigned long long addr, bool write_only)
 		return -1;
 	}
 
-	// TODO: make it generic based on length
+	// TODO [WP_LEN]: make it generic based on length
 	// probably add it to the argument list
 	if ((addr % 4) != 0) {
 		pr_info_raw("address must be 4-byte aligned\n");
@@ -183,25 +238,35 @@ int watchpoint_add(tracee_t *tracee, unsigned long long addr, bool write_only)
 
 	// Check for L0-L3
 	for (int i = 0; i <= 3; i++) {
-		if (!DR_ON(data, i)) {
+		if (!DR7_ON(data, i)) {
 			// fetch old value
 			long old_val =
 			    ptrace(PTRACE_PEEKDATA, tracee->pid, addr, NULL);
-			if (old_val == -1) {
-				pr_warn("error in getting old val, assuming 0");
+			if (old_val == -1 && errno != 0) {
+				if (errno == EIO || errno == EFAULT) {
+					pr_info_raw("the requested memory "
+						    "address(%#llx) is "
+						    "not accessible\n",
+					    addr);
+				} else {
+					pr_err("reading the address(%#llx) "
+					       "failed: %s",
+					    addr, strerror(errno));
+				}
+				return -1;
 			} else {
 				watchpoint_old_values[i] = old_val;
 			}
 
 			// add the watchpoint
 			// enable the DR[i] bit
-			long wp_dr7 = DR_SET_ON(data, i);
+			long wp_dr7 = DR7_SET_ON(data, i);
 			// set RW[i] and LEN[i]
-			wp_dr7 = DR_SET_LEN(wp_dr7, i, 0b11);
+			wp_dr7 = DR7_LEN_SET(wp_dr7, i, 0b11);
 			if (write_only)
-				wp_dr7 = DR_SET_RW(wp_dr7, i, 0b01);
+				wp_dr7 = DR7_RW_SET(wp_dr7, i, 0b01);
 			else
-				wp_dr7 = DR_SET_RW(wp_dr7, i, 0b11);
+				wp_dr7 = DR7_RW_SET(wp_dr7, i, 0b11);
 
 			pr_debug("DR[%d] writing dr7=%#lx", i, wp_dr7);
 

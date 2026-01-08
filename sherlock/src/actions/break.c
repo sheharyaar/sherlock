@@ -14,7 +14,7 @@
 #include <stdlib.h>
 
 /*
-TODO_LATER:
+TODO [LATER]:
 - File:line
 - line
 */
@@ -61,8 +61,8 @@ static tracee_state_e breakpoint_func(tracee_t *tracee, char *func)
 			return TRACEE_STOPPED;
 		}
 
-		// TODO_LATER: yet to be implemented
-		// TODO_LATER: fix double >dbg prompt
+		// TODO [SYM_LATER]: yet to be implemented
+		// TODO [SYM_LATER]: fix double >dbg prompt
 		pr_warn("feature not implemented yet");
 		return TRACEE_STOPPED;
 	}

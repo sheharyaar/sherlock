@@ -141,7 +141,7 @@ static void handle_stop(int wstatus)
 	}
 }
 
-// TODO_LATER: Add signal handler to send SIGINT to tracee instead of debugger
+// TODO [TTY]: Add signal handler to send SIGINT to tracee instead of debugger
 
 int main(int argc, char *argv[])
 {
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
 		goto cleanup_unw;
 	}
 
-	// TODO_LATER: Fix pgid and tty ownership
+	// TODO [TTY]: Fix pgid and tty ownership
 	// if (setpgid(0, 0) == -1) {
 	// 	pr_err("error in parent setpgid: %s", strerror(errno));
 	// 	return 1;

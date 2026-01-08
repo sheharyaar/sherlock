@@ -38,7 +38,7 @@ static tracee_state_e info_addr(tracee_t *tracee, char *arg)
 
 static tracee_state_e info_func(tracee_t *tracee, char *func)
 {
-	// TODO: print function (symbol)
+	// TODO [SYM_RES]: print function (symbol)
 	// here we would require GOT resolution and memory map mapping
 	symbol_t *sym = sym_lookup_name(tracee, func);
 	if (sym == NULL) {

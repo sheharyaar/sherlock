@@ -15,7 +15,7 @@
 #include <sys/ptrace.h>
 #include <sys/user.h>
 
-// TODO_LATER: print ENTITY_VARIABLE
+// TODO [LATER]: print ENTITY_VARIABLE
 
 #define PRINT_REG(regs, target) pr_info_raw("%lld\n", regs.target);
 
