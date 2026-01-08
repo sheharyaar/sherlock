@@ -170,7 +170,7 @@ int breakpoint_handle(tracee_t *tracee)
 
 		tracee->pending_bp = bp;
 	} else {
-		pr_debug("no breakpoint found for addr: %lld", regs.rip);
+		pr_debug("no breakpoint found for addr: %llx", regs.rip);
 	}
 
 	return 0;

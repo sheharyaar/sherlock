@@ -59,11 +59,17 @@ static tracee_state_e info_funcs(
 	return TRACEE_STOPPED;
 }
 
-// gives info about registers, breakpoints, etc.
 static tracee_state_e info_breakpoints(
     tracee_t *tracee, __attribute__((unused)) char *args)
 {
 	breakpoint_printall(tracee);
+	return TRACEE_STOPPED;
+}
+
+static tracee_state_e info_watchpoints(
+    tracee_t *tracee, __attribute__((unused)) char *args)
+{
+	watchpoint_printall(tracee);
 	return TRACEE_STOPPED;
 }
 
@@ -86,6 +92,7 @@ static action_t action_info = { .type = ACTION_INFO,
 		[ENTITY_FUNCTION] = info_func,
 		[ENTITY_FUNCTIONS] = info_funcs,
 		[ENTITY_ADDRESS] = info_addr,
+		[ENTITY_WATCHPOINT] = info_watchpoints,
 	},
 	.match_action = match_info,
 	.name = "info"

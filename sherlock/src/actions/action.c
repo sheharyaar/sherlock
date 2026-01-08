@@ -21,6 +21,7 @@ static const char *entity_str[ENTITY_COUNT] = {
 	[ENTITY_FILE_LINE] = "fline",
 	[ENTITY_REGISTER] = "reg",
 	[ENTITY_BREAKPOINT] = "break",
+	[ENTITY_WATCHPOINT] = "watch",
 	[ENTITY_NONE] = "<none>",
 };
 
@@ -81,7 +82,7 @@ void print_supported_entities(action_e act)
 	pr_info_raw("Supported entities are: ");
 	for (int ent = 0; ent < ENTITY_COUNT; ent++) {
 		if (action_list[act]->ent_handler[ent] != NULL) {
-			pr_info_raw("%s, ", entity_str[ent]);
+			pr_info_raw("%s ", entity_str[ent]);
 		}
 	}
 	pr_info_raw("\n");

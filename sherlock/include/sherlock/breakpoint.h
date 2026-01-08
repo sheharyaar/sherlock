@@ -20,4 +20,8 @@ void breakpoint_printall(tracee_t *tracee);
 void breakpoint_delete(tracee_t *tracee);
 void breakpoint_cleanup(tracee_t *tracee);
 
+// Watch points
+int watchpoint_add(tracee_t *tracee, unsigned long long addr, bool write_only);
+void watchpoint_printall(tracee_t *tracee);
+
 #endif

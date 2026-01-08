@@ -210,6 +210,8 @@ int main(int argc, char *argv[])
 
 					single_step = si.si_code == TRAP_TRACE;
 					if (!single_step) {
+						// TODO: check for watchpoint
+						// stops
 						if (breakpoint_handle(
 							&global_tracee) == -1) {
 							pr_err(
