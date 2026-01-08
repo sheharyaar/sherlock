@@ -14,6 +14,9 @@
 #include <sys/user.h>
 #include <byteswap.h>
 
+// This is 4 as we only consider x86-64 for the debugger.
+long watchpoint_old_values[4] = { 0 };
+
 /*
  * DR4-DR5 should _not_ be used by software
  * DR6 status regsiter, relevant bits:
@@ -52,6 +55,7 @@
 
 void watchpoint_printall(tracee_t *tracee)
 {
+	// TODO: print depending on len of watchpoint
 	long data = 0UL;
 	data = ptrace(PTRACE_PEEKUSER, tracee->pid, DR_OFFSET(DR_CTRL), NULL);
 	if (data == -1) {
@@ -96,10 +100,64 @@ void watchpoint_printall(tracee_t *tracee)
 				len = 1;
 			}
 
-			pr_info_raw("[%d] address=%#lx, R/W=%s, Len=%d bytes\n",
-			    i, dr_data, rw, len);
+			pr_info_raw("[%d] address=%#lx, R/W=%s, Len=%d, "
+				    "old_val=%3lx bytes\n",
+			    i, dr_data, rw, len, watchpoint_old_values[i]);
 		}
 	}
+}
+
+bool watchpoint_check_print(tracee_t *tracee)
+{
+	pr_debug("checking watchpoint");
+	// TODO: print depending on len of watchpoint
+	long data = 0UL;
+	data = ptrace(PTRACE_PEEKUSER, tracee->pid, DR_OFFSET(DR_STATUS), NULL);
+	if (data == -1) {
+		pr_err("error in reading DR[7] reg: %s", strerror(errno));
+		return false;
+	}
+
+	if ((data & (0xf)) == 0) {
+		// not a watchpoint stop
+		return false;
+	}
+
+	// trailing zeros will give the index
+	int idx = __builtin_ctz(data);
+	pr_debug("watchpoint found at idx=%d", idx);
+
+	long addr = ptrace(PTRACE_PEEKUSER, tracee->pid, DR_OFFSET(idx), NULL);
+	if (addr == -1) {
+		pr_err("error in getting DR[%d] register: %s", idx,
+		    strerror(errno));
+		return true;
+	}
+
+	// print the watchpoint
+	long new_val = ptrace(PTRACE_PEEKDATA, tracee->pid, addr, NULL);
+	if (new_val == -1) {
+		pr_err(
+		    "error in getting data at %#lx used by watchpoint(%d): %s",
+		    addr, idx, strerror(errno));
+		return true;
+	}
+
+	struct user_regs_struct regs;
+	if (ptrace(PTRACE_GETREGS, tracee->pid, NULL, &regs) == -1) {
+		pr_err("watchpoint_check_print: error in getting registers: %s",
+		    strerror(errno));
+		return true;
+	}
+
+	// TODO is the r/w instruction RIP ? Or one instr before RIP ?
+	pr_info_raw(
+	    "Watchpoint %d, old_val=%#lx, new_val=%#lx, rw_instr = %#llx\n",
+	    idx, watchpoint_old_values[idx], new_val, regs.rip);
+
+	watchpoint_old_values[idx] = new_val;
+
+	return true;
 }
 
 int watchpoint_add(tracee_t *tracee, unsigned long long addr, bool write_only)
@@ -126,6 +184,16 @@ int watchpoint_add(tracee_t *tracee, unsigned long long addr, bool write_only)
 	// Check for L0-L3
 	for (int i = 0; i <= 3; i++) {
 		if (!DR_ON(data, i)) {
+			// fetch old value
+			long old_val =
+			    ptrace(PTRACE_PEEKDATA, tracee->pid, addr, NULL);
+			if (old_val == -1) {
+				pr_warn("error in getting old val, assuming 0");
+			} else {
+				watchpoint_old_values[i] = old_val;
+			}
+
+			// add the watchpoint
 			// enable the DR[i] bit
 			long wp_dr7 = DR_SET_ON(data, i);
 			// set RW[i] and LEN[i]

@@ -16,7 +16,6 @@
 #include <sys/user.h>
 #include <sys/wait.h>
 
-// TODO: Check for plt_need_resolve and patch the PLT entry for this symbol
 int breakpoint_add(tracee_t *tracee, unsigned long long bpaddr, symbol_t *sym)
 {
 
@@ -136,6 +135,11 @@ int breakpoint_handle(tracee_t *tracee)
 		return -1;
 	}
 
+	if (watchpoint_check_print(tracee)) {
+		return 0;
+	}
+
+	// check for SW breakpoint
 	bool found = false;
 	breakpoint_t *bp = tracee->bp_list;
 	while (bp) {
@@ -147,31 +151,31 @@ int breakpoint_handle(tracee_t *tracee)
 		bp = bp->next;
 	}
 
-	pr_debug("rip1=%#llx", regs.rip);
-
-	// replace the change text and reset the rip
-	if (found) {
-		++bp->counter;
-		breakpoint_print(bp);
-		unsigned long val = bp->value;
-		if (ptrace(PTRACE_POKETEXT, tracee->pid, bp->addr, val) == -1) {
-			pr_err("breakpoint_handle: ptrace POKETEXT err - %s",
-			    strerror(errno));
-			return -1;
-		}
-
-		regs.rip -= 1;
-		if (ptrace(PTRACE_SETREGS, tracee->pid, NULL, &regs) == -1) {
-			pr_err("breakpoint_handle: ptrace SETREGS error - %s",
-			    strerror(errno));
-			return -1;
-		}
-		pr_debug("rip2=%#llx", regs.rip);
-
-		tracee->pending_bp = bp;
-	} else {
+	pr_debug("rip=%#llx", regs.rip);
+	if (!found) {
 		pr_debug("no breakpoint found for addr: %llx", regs.rip);
+		return 0;
 	}
+
+	++bp->counter;
+	// replace the change text and reset the rip
+	breakpoint_print(bp);
+	unsigned long val = bp->value;
+	if (ptrace(PTRACE_POKETEXT, tracee->pid, bp->addr, val) == -1) {
+		pr_err("breakpoint_handle: ptrace POKETEXT err - %s",
+		    strerror(errno));
+		return -1;
+	}
+
+	regs.rip -= 1;
+	if (ptrace(PTRACE_SETREGS, tracee->pid, NULL, &regs) == -1) {
+		pr_err("breakpoint_handle: ptrace SETREGS error - %s",
+		    strerror(errno));
+		return -1;
+	}
+	pr_debug("rip_final=%#llx", regs.rip);
+
+	tracee->pending_bp = bp;
 
 	return 0;
 }

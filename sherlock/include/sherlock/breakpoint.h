@@ -22,6 +22,9 @@ void breakpoint_cleanup(tracee_t *tracee);
 
 // Watch points
 int watchpoint_add(tracee_t *tracee, unsigned long long addr, bool write_only);
+// returns true if a watchpoint was found and prints the watchpoint detail
+bool watchpoint_check_print(tracee_t *tracee);
+int watchpoint_delete(tracee_t *tracee);
 void watchpoint_printall(tracee_t *tracee);
 
 #endif

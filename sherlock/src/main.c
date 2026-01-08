@@ -109,6 +109,38 @@ static int setup_libunwind(tracee_t *tracee)
 	return 0;
 }
 
+static void handle_stop(int wstatus)
+{
+	if (WSTOPSIG(wstatus) != SIGTRAP) {
+		pr_info_raw("tracee received signal: %s\n",
+		    strsignal(WSTOPSIG(wstatus)));
+		return;
+	}
+
+	// could be a breakpoint stop
+	siginfo_t si;
+	bool single_step = true;
+	if (ptrace(PTRACE_GETSIGINFO, global_tracee.pid, NULL, &si) == -1) {
+		pr_warn("ptrace_getsiginfo "
+			"failed, sending it to "
+			"breakpoint path: %s",
+		    strerror(errno));
+		return;
+	}
+
+	// ignore single step stops
+	single_step = (si.si_code == TRAP_TRACE);
+	if (single_step) {
+		return;
+	}
+
+	if (breakpoint_handle(&global_tracee) == -1) {
+		pr_err("error in handling "
+		       "SIGTRAP");
+		return;
+	}
+}
+
 // TODO_LATER: Add signal handler to send SIGINT to tracee instead of debugger
 
 int main(int argc, char *argv[])
@@ -195,35 +227,7 @@ int main(int argc, char *argv[])
 			}
 
 			if (WIFSTOPPED(wstatus)) {
-				if (WSTOPSIG(wstatus) == SIGTRAP) {
-					// could be a breakpoint stop
-					siginfo_t si;
-					bool single_step = true;
-					if (ptrace(PTRACE_GETSIGINFO,
-						global_tracee.pid, NULL,
-						&si) == -1) {
-						pr_warn("ptrace_getsiginfo "
-							"failed, sending it to "
-							"breakpoint path: %s",
-						    strerror(errno));
-					}
-
-					single_step = si.si_code == TRAP_TRACE;
-					if (!single_step) {
-						// TODO: check for watchpoint
-						// stops
-						if (breakpoint_handle(
-							&global_tracee) == -1) {
-							pr_err(
-							    "error in handling "
-							    "SIGTRAP");
-						}
-					}
-				} else {
-					pr_info_raw(
-					    "tracee received signal: %s\n",
-					    strsignal(WSTOPSIG(wstatus)));
-				} /* SIGTRAP if-block*/
+				handle_stop(wstatus);
 			} /* WIFSTOPPED if-block */
 
 			state = TRACEE_STOPPED;
