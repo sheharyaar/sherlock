@@ -27,9 +27,12 @@ static tracee_state_e kill_tracee(
 
 static bool match_kill(char *act) { return MATCH_STR(act, kill); }
 
+static void help_kill() { pr_info_raw("kill\n"); };
+
 static action_t action_kill = { .type = ACTION_KILL,
 	.ent_handler = { [ENTITY_NONE] = kill_tracee, },
 	.match_action = match_kill,
+	.help = help_kill,
 	.name = "kill"
 	};
 

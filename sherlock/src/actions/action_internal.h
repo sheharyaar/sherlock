@@ -40,11 +40,13 @@
 
 typedef tracee_state_e (*handler_entity_t)(tracee_t *tracee, char *args);
 typedef bool (*handler_match_t)(char *act);
+typedef void (*handler_help_t)();
 
 typedef struct ACTION_S {
 	action_e type;
 	handler_entity_t ent_handler[ENTITY_COUNT];
 	handler_match_t match_action;
+	handler_help_t help;
 	const char *name;
 } action_t;
 
@@ -55,6 +57,8 @@ int action_handler_reg(action_t *act);
 // handlers. Example: "info" can call "print" handlers to print the values.
 tracee_state_e action_handler_call(
     tracee_t *t, action_e act, entity_e ent, char *args);
+
+void action_print_call(action_e act);
 
 #define REG_ACTION(action, act)                                                \
 	__attribute__((constructor)) static void register_##action_handler(    \

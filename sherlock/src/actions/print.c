@@ -159,6 +159,12 @@ static bool match_print(char *act)
 	return (MATCH_STR(act, print) || MATCH_STR(act, p));
 }
 
+static void help_print()
+{
+	pr_info_raw("print,p reg <reg>\n");
+	pr_info_raw("print,p addr <0xaddress>\n");
+}
+
 static action_t action_print = {
 	.type = ACTION_PRINT,
 	.ent_handler = {
@@ -166,6 +172,7 @@ static action_t action_print = {
 		[ENTITY_ADDRESS] = print_addr,
 	},
 	.match_action = match_print,
+	.help = help_print,
 	.name = "print",
 };
 

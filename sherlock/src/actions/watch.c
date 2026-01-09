@@ -33,11 +33,14 @@ static bool match_watch(char *act)
 	return (MATCH_STR(act, watch) || MATCH_STR(act, w));
 }
 
+static void help_watch() { pr_info_raw("watch,w addr <0xaddress>\n"); }
+
 static action_t action_watch = { .type = ACTION_WATCH,
 	.ent_handler = {
 		[ENTITY_ADDRESS] = watch_addr,
 	},
 	.match_action = match_watch,
+	.help = help_watch,
 	.name = "watch"
 };
 

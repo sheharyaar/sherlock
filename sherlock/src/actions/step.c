@@ -32,12 +32,15 @@ static bool match_step(char *act)
 	return (MATCH_STR(act, step) || MATCH_STR(act, s));
 }
 
+static void help_step() { pr_info_raw("step,s\n"); }
+
 static action_t action_step = { 
 	.type = ACTION_STEP,
 	.ent_handler = {
 	    [ENTITY_NONE] = step,
 	},
 	.match_action = match_step,
+	.help = help_step,
 	.name = "step",
 };
 

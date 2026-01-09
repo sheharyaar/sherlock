@@ -46,12 +46,15 @@ static bool match_backtrace(char *act)
 	return (MATCH_STR(act, backtrace) || MATCH_STR(act, bt));
 }
 
+static void help_backtrace() { pr_info_raw("backtrace,bt\n"); }
+
 static action_t action_backtrace = { 
 	.type = ACTION_BACKTRACE,
 	.ent_handler = {
 	    [ENTITY_NONE] = backtrace,
 	},
 	.match_action = match_backtrace,
+	.help = help_backtrace,
 	.name = "backtrace"
 };
 

@@ -61,7 +61,17 @@ static entity_e str_to_entity(char *ent_str)
 	return ENTITY_COUNT;
 }
 
-void print_supported_actions()
+void print_actionsall()
+{
+	pr_info_raw("Supported commands are: \n");
+	for (int act = 0; act < ACTION_COUNT; act++) {
+		if (action_list[act] != NULL) {
+			action_list[act]->help();
+		}
+	}
+}
+
+static void print_supported_actions()
 {
 	pr_info_raw("Supported actions are: ");
 	for (int act = 0; act < ACTION_COUNT; act++) {
@@ -72,20 +82,15 @@ void print_supported_actions()
 	pr_info_raw("\n");
 }
 
-void print_supported_entities(action_e act)
+void action_print_call(action_e act)
 {
 	if (act == ACTION_COUNT) {
-		pr_err("print_supported_entities: invalid action passed");
+		pr_err("action_print_call: invalid action passed");
 		return;
 	}
 
-	pr_info_raw("Supported entities are: ");
-	for (int ent = 0; ent < ENTITY_COUNT; ent++) {
-		if (action_list[act]->ent_handler[ent] != NULL) {
-			pr_info_raw("%s ", entity_str[ent]);
-		}
-	}
-	pr_info_raw("\n");
+	pr_info_raw("Supported commands are: \n");
+	action_list[act]->help();
 }
 
 int action_handler_reg(action_t *act)
@@ -119,7 +124,7 @@ tracee_state_e action_handler_call(
 	if (action_list[act]->ent_handler[ent] == NULL) {
 		pr_err("invalid entity(%s) for action(%s) requested",
 		    entity_str[ent], action_list[act]->name);
-		print_supported_entities(act);
+		action_print_call(act);
 		return TRACEE_STOPPED;
 	}
 
@@ -155,10 +160,27 @@ tracee_state_e action_parse_input(tracee_t *tracee, char *input)
 		return TRACEE_STOPPED;
 	}
 
+	if (act == ACTION_HELP) {
+		if (entity == NULL) {
+			return action_handler_call(
+			    tracee, act, ENTITY_NONE, NULL);
+		}
+
+		int help_act = str_to_action(entity);
+		if (help_act == ACTION_COUNT) {
+			pr_err("invalid arg to help: '%s'", entity);
+			action_print_call(act);
+			return TRACEE_STOPPED;
+		}
+
+		return action_handler_call(
+		    tracee, act, ENTITY_NONE, (char *)(intptr_t)help_act);
+	}
+
 	entity_e ent = str_to_entity(entity);
 	if (ent == ENTITY_COUNT) {
 		pr_err("invalid entity: '%s'", entity);
-		print_supported_entities(act);
+		action_print_call(act);
 		return TRACEE_STOPPED;
 	}
 

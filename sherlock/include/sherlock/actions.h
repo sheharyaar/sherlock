@@ -14,5 +14,6 @@
 
 tracee_state_e action_parse_input(tracee_t *t, char *input);
 void action_cleanup(tracee_t *tracee);
+void print_actionsall();
 
 #endif

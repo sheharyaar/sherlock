@@ -44,12 +44,19 @@ static bool match_delete(char *act)
 	return (MATCH_STR(act, delete) || MATCH_STR(act, del));
 }
 
+static void help_delete()
+{
+	pr_info_raw("delete,dl watch <watchpoint_index>\n");
+	pr_info_raw("delete,dl break <breakpoint_num>\n");
+}
+
 static action_t action_delete = { .type = ACTION_DELETE,
 	.ent_handler = {
 	    [ENTITY_BREAKPOINT] = delete_breakpoint,
 		[ENTITY_WATCHPOINT] = delete_watchpoint,
 	},
 	.match_action = match_delete,
+	.help = help_delete,
 	.name = "delete"
 };
 

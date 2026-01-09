@@ -85,6 +85,16 @@ static bool match_info(char *act)
 	return (MATCH_STR(act, info) || MATCH_STR(act, inf));
 }
 
+static void help_info()
+{
+	pr_info_raw("info,inf func <function_name>\n");
+	pr_info_raw("info,inf addr <0xaddress>\n");
+	pr_info_raw("info,inf break\n");
+	pr_info_raw("info,inf reg\n");
+	pr_info_raw("info,inf funcs\n");
+	pr_info_raw("info,inf watch\n");
+}
+
 static action_t action_info = { .type = ACTION_INFO,
 	.ent_handler = {
 	    [ENTITY_BREAKPOINT] = info_breakpoints,
@@ -95,6 +105,7 @@ static action_t action_info = { .type = ACTION_INFO,
 		[ENTITY_WATCHPOINT] = info_watchpoints,
 	},
 	.match_action = match_info,
+	.help = help_info,
 	.name = "info"
 };
 

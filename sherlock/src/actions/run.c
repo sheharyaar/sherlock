@@ -30,12 +30,15 @@ static tracee_state_e run(tracee_t *tracee, __attribute__((unused)) char *args)
 
 static bool match_run(char *act) { return MATCH_STR(act, run); }
 
+static void help_action() { pr_info_raw("run\n"); }
+
 static action_t action_run = { 
 	.type = ACTION_RUN,
 	.ent_handler = {
 	    [ENTITY_NONE] = run,
 	},
 	.match_action = match_run,
+	.help = help_action,
 	.name = "run"
 };
 

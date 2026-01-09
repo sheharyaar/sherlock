@@ -79,11 +79,18 @@ static bool match_break(char *act)
 	return (MATCH_STR(act, break) || MATCH_STR(act, br));
 }
 
+static void help_break()
+{
+	pr_info_raw("break,br func <function_name>\n");
+	pr_info_raw("break,br addr <0xaddress>\n");
+}
+
 static action_t action_break = {
 	.type = ACTION_BREAK,
 	.ent_handler = { [ENTITY_ADDRESS] = breakpoint_addr,
 	    [ENTITY_FUNCTION] = breakpoint_func },
 	.match_action = match_break,
+	.help = help_break,
 	.name = "break",
 };
 
