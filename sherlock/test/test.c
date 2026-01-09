@@ -12,6 +12,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
+unsigned global_uninit;
+unsigned global_init = 2;
+
 __attribute__((noinline)) void local_func(void) { puts("inside local_func"); }
 
 __attribute__((noinline)) void call_printf(const char *msg)
@@ -33,6 +36,11 @@ int main(void)
 	// post-resolution
 	call_puts("second puts");
 	call_printf("second printf");
+
+	global_init = 23;
+	global_uninit = 100;
+
+	printf("uninit: %d\n init: %d\n", global_uninit, global_init);
 
 	/* Prevent tail-call / exit optimization */
 	sleep(1);

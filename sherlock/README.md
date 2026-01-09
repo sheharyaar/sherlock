@@ -4,22 +4,6 @@ A simple debugger using `ptrace` and other required techniques to debug Linux pr
 
 > This is work in progress. Stay tuned for updates.
 
-### TODOs
-
-- Implement a parser/grammar API for getting the actions, entities, and intents from the text input.
-  - [X] Used strtok for basic parsing.
-- Implement breakpoint support using INT.
-  - [X] Basic breakpoint setting and listing -- works once per breakpoint command (like temporary breakpoints).
-  - [X] Support temporary and permanent breakpoints.
-- Implement debugger symbol support for variables and functions.
-  - [ ] Support for functions (DSO and non-DSO).
-    - [ ] GCC renames the conflicting functions with suffixes, so demangle these.
-    - [ ] Test local functions with same name in different files.
-  - [ ] Support for local variables (watchpoint debugging).
-  - [ ] Support for function arguments printing.
-- Implement stack unwinding / backtrace support.
-  - [X] Look into eh_frame and debug_frame sections for DWARF info.
-
 ### Notes
 
 This project brought a lot of insights into how debuggers like GDB work under the hood. I became aware of some techniques used by debuggers to boost perfformance, like setting breakpoints by replacing instructions with INT instructions, using `/proc/<pid>/mem` for reading/writing memory, etc.
