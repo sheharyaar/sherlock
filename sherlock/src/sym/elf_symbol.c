@@ -9,8 +9,10 @@
 
 #include "sym_internal.h"
 #include <fcntl.h>
+#include <link.h>
 #include <unistd.h>
 #include <sys/ptrace.h>
+#include <sherlock/breakpoint.h>
 
 static symbol_t *sherlock_symtab = NULL;
 static section_t *section_list = NULL;
@@ -250,6 +252,71 @@ static int handle_static_syms(
 	return 0;
 }
 
+static int handle_dyn_linker(tracee_t *tracee, Elf_Scn *scn, Elf64_Shdr *hdr)
+{
+	// Read DT_DEBUG value from dynamic section
+	Elf_Data *dyn_data = elf_getdata(scn, NULL);
+	if (!dyn_data) {
+		pr_err("error in reading .dynamic section data: %s",
+		    elf_errmsg(elf_errno()));
+		return -1;
+	}
+
+	unsigned long dyn_debug_off = 0UL;
+
+	GElf_Dyn dyn_ent;
+	int count = hdr->sh_size / hdr->sh_entsize;
+	for (int i = 0; i < count; i++) {
+		if (gelf_getdyn(dyn_data, i, &dyn_ent) == NULL) {
+			pr_err(
+			    "error in getting .dynamic data at index(%i)", i);
+			return -1;
+		}
+
+		if (dyn_ent.d_tag == DT_DEBUG) {
+			dyn_debug_off =
+			    (i * hdr->sh_entsize) + offsetof(Elf64_Dyn, d_un);
+			break;
+		}
+	}
+
+	if (dyn_debug_off == 0) {
+		pr_err("DYNAMIC tag not found in .dynamic section");
+		return -1;
+	}
+
+	unsigned long dyn_debug_addr =
+	    tracee->va_base + hdr->sh_addr + dyn_debug_off;
+
+	// read the data, if addr != 0 then do not add watchpoint, directly
+	// handle the debug structure (in cases of already running tracee)
+	long dyn_debug_data =
+	    ptrace(PTRACE_PEEKDATA, tracee->pid, dyn_debug_addr, NULL);
+	if (dyn_debug_data == -1) {
+		pr_err("error in reading DT_DEBUG data in memory (%#lx): %s",
+		    dyn_debug_addr, strerror(errno));
+		return -1;
+	}
+
+	if (dyn_debug_data != 0) {
+		tracee->debug.need_watch = false; // data already present
+		tracee->debug.addr = dyn_debug_data;
+		return sym_setup_dldebug(tracee);
+	}
+
+	// Now create the watch point from the start addr; we will watch only 8
+	// bits as the write would affect the entire sh_entsize
+	if (watchpoint_add(tracee, dyn_debug_addr, true) == -1) {
+		pr_err("unable to add watchpoint for r_debug");
+		return -1;
+	}
+
+	tracee->debug.addr = dyn_debug_addr;
+	tracee->debug.need_watch = true;
+
+	return 0;
+}
+
 int sym_setup(tracee_t *tracee)
 {
 	pr_debug("opening and reading file: %s", tracee->exe_path);
@@ -306,6 +373,8 @@ int sym_setup(tracee_t *tracee)
 	Elf64_Shdr *rela_dyn_hdr = NULL;
 	Elf_Scn *rela_plt_scn = NULL;
 	Elf64_Shdr *rela_plt_hdr = NULL;
+	Elf_Scn *dyn_scn = NULL;
+	Elf64_Shdr *dyn_hdr = NULL;
 
 	// Build section map
 	unsigned int idx = 0;
@@ -352,6 +421,11 @@ int sym_setup(tracee_t *tracee)
 		if (MATCH_STR(name, .symtab)) {
 			symtab_scn = scn;
 			symtab_hdr = hdr;
+		}
+
+		if (MATCH_STR(name, .dynamic)) {
+			dyn_scn = scn;
+			dyn_hdr = hdr;
 		}
 
 		// skip non-allocated and 0 address section
@@ -404,6 +478,15 @@ int sym_setup(tracee_t *tracee)
 	}
 
 	HASH_SORT(sherlock_symtab, sym_sort_cmp);
+
+	// Get the linker debug struct address (r_debug)
+	if (dyn_scn) {
+		if (handle_dyn_linker(tracee, dyn_scn, dyn_hdr) == -1) {
+			pr_warn("error in parsing .dynamic section, some "
+				"features like breakpointing dynamic lib "
+				"functions _may_ get affected");
+		}
+	}
 
 #ifdef DEBUG
 	symbol_t *s, *t;

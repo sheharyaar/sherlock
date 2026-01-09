@@ -96,11 +96,15 @@ typedef struct BREAKPOINT {
 typedef struct TRACEE {
 	pid_t pid;
 	breakpoint_t *bp_list;
+	breakpoint_t *pending_bp;
 	unsigned long long va_base;
 	unw_addr_space_t unw_addr;
 	char name[SHERLOCK_MAX_STRLEN];
 	char exe_path[SHERLOCK_MAX_STRLEN];
-	breakpoint_t *pending_bp;
+	struct _DEBUG {
+		unsigned long addr;
+		bool need_watch;
+	} debug;
 } tracee_t;
 
 #endif

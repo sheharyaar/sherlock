@@ -20,4 +20,6 @@ int sym_proc_pid_info(tracee_t *tracee);
 void sym_printall(tracee_t *tracee);
 void sym_cleanup(tracee_t *tracee);
 
+int sym_setup_dldebug(tracee_t *tracee);
+
 #endif

@@ -31,12 +31,13 @@
 
 static tracee_t global_tracee = {
 	.bp_list = NULL,
+	.pending_bp = NULL,
+	.debug = { .addr = 0, .need_watch = false },
 	.exe_path = { 0 },
 	.name = { 0 },
 	.pid = 0,
 	.unw_addr = NULL,
 	.va_base = 0,
-	.pending_bp = NULL,
 };
 
 static pid_t sherlock_pid = 0;
@@ -109,36 +110,35 @@ static int setup_libunwind(tracee_t *tracee)
 	return 0;
 }
 
-static void handle_stop(int wstatus)
+static tracee_state_e handle_stop(int wstatus)
 {
 	if (WSTOPSIG(wstatus) != SIGTRAP) {
 		pr_info_raw("tracee received signal: %s\n",
 		    strsignal(WSTOPSIG(wstatus)));
-		return;
+		return TRACEE_STOPPED;
 	}
 
 	// could be a breakpoint stop
 	siginfo_t si;
-	bool single_step = true;
 	if (ptrace(PTRACE_GETSIGINFO, global_tracee.pid, NULL, &si) == -1) {
-		pr_warn("ptrace_getsiginfo "
-			"failed, sending it to "
-			"breakpoint path: %s",
+		pr_err("ptrace_getsiginfo failed, sending it to breakpoint "
+		       "path: %s",
 		    strerror(errno));
-		return;
+		return TRACEE_ERR;
 	}
 
 	// ignore single step stops
-	single_step = (si.si_code == TRAP_TRACE);
-	if (single_step) {
-		return;
+	pr_debug("si_code=%d", si.si_code);
+	if (si.si_code == TRAP_HWBKPT) {
+		return watchpoint_handle(&global_tracee);
+	} else if (si.si_code == TRAP_TRACE) {
+		// skip singlestep stops (do not check for
+		// breakpoint/watchpoint)
+	} else {
+		return breakpoint_handle(&global_tracee);
 	}
 
-	if (breakpoint_handle(&global_tracee) == -1) {
-		pr_err("error in handling "
-		       "SIGTRAP");
-		return;
-	}
+	return TRACEE_STOPPED;
 }
 
 // TODO [TTY]: Add signal handler to send SIGINT to tracee instead of debugger
@@ -198,27 +198,16 @@ int main(int argc, char *argv[])
 	above.
 	 */
 	int wstatus = 0;
+	state = TRACEE_STOPPED;
 	while (1) {
-		dbg_prompt(input, SHERLOCK_MAX_STRLEN);
-		state = action_parse_input(&global_tracee, input);
-		if (state == TRACEE_ERR) {
-			pr_err("critical error, killing debugger");
-			goto cleanup_unw;
-		}
+		if (state == TRACEE_STOPPED) {
+			dbg_prompt(input, SHERLOCK_MAX_STRLEN);
+			state = action_parse_input(&global_tracee, input);
 
-		if (state == TRACEE_KILLED) {
-			pr_info("the tracee has been killed, exiting debugger");
-			goto cleanup_unw;
-		}
-
-#if DEBUG
-		assert(state == TRACEE_RUNNING || state == TRACEE_STOPPED);
-#endif
-
-		if (state == TRACEE_RUNNING) {
+		} else if (state == TRACEE_RUNNING) {
 			if (waitpid(global_tracee.pid, &wstatus, 0) < 0) {
 				pr_err("waitpid err: %s", strerror(errno));
-				goto cleanup_unw;
+				goto cleanup_detach;
 			}
 
 			if (WIFEXITED(wstatus)) {
@@ -227,15 +216,32 @@ int main(int argc, char *argv[])
 			}
 
 			if (WIFSTOPPED(wstatus)) {
-				handle_stop(wstatus);
+				// since some breakpoints are used internally by
+				// debugger they dont need the tracee to stop
+				state = handle_stop(wstatus);
+				continue;
 			} /* WIFSTOPPED if-block */
 
 			state = TRACEE_STOPPED;
+		};
+
+		if (state == TRACEE_ERR) {
+			pr_err("critical error, killing debugger");
+			goto cleanup_detach;
+		}
+
+		if (state == TRACEE_KILLED) {
+			pr_info("the tracee has been killed, exiting "
+				"debugger");
+			// tracee detach not required, may give ESRCH
+			goto cleanup_unw;
 		}
 	}
 
 	return 0;
 
+cleanup_detach:
+	ptrace(PTRACE_DETACH, global_tracee.pid, NULL, NULL);
 cleanup_unw:
 	if (global_tracee.unw_addr != NULL) {
 		unw_destroy_addr_space(global_tracee.unw_addr);

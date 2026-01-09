@@ -8,6 +8,7 @@
  */
 
 #include <sherlock/breakpoint.h>
+#include <sherlock/sym.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/ptrace.h>
@@ -156,20 +157,21 @@ void watchpoint_printall(tracee_t *tracee)
 	}
 }
 
-bool watchpoint_check_print(tracee_t *tracee)
+// returns index of wp
+int watchpoint_check(tracee_t *tracee, long *dst_addr, long *dst_data)
 {
-	pr_debug("checking watchpoint");
 	// TODO [WP_LEN]: print depending on len of watchpoint
 	long data = 0UL;
 	data = ptrace(PTRACE_PEEKUSER, tracee->pid, DR_OFFSET(DR_STATUS), NULL);
 	if (data == -1) {
-		pr_err("error in reading DR[7] reg: %s", strerror(errno));
+		pr_err("error in reading DR[6] reg: %s", strerror(errno));
 		return false;
 	}
 
 	if ((data & (0xf)) == 0) {
 		// not a watchpoint stop
-		return false;
+		pr_warn("unkown watchpoint");
+		return -1;
 	}
 
 	// trailing zeros will give the index
@@ -180,7 +182,7 @@ bool watchpoint_check_print(tracee_t *tracee)
 	if (addr == -1) {
 		pr_err("error in getting DR[%d] register: %s", idx,
 		    strerror(errno));
-		return true;
+		return -1;
 	}
 
 	// print the watchpoint
@@ -195,14 +197,64 @@ bool watchpoint_check_print(tracee_t *tracee)
 			    strerror(errno));
 		}
 
-		return true;
+		*dst_addr = addr;
+		return -1;
+	}
+
+	*dst_addr = addr;
+	*dst_data = new_val;
+	return idx;
+}
+
+#define DLDEBUG_WATCH_ADDR(tracee, addr)                                       \
+	tracee->debug.need_watch && (unsigned long)addr == tracee->debug.addr
+
+tracee_state_e watchpoint_handle(tracee_t *tracee)
+{
+	// get the checkpoint address
+	long addr = 0, new_val = 0;
+	int idx = watchpoint_check(tracee, &addr, &new_val);
+	if (idx == -1) {
+		if (DLDEBUG_WATCH_ADDR(tracee, addr)) {
+			tracee->debug.need_watch = false;
+			tracee->debug.addr = 0UL;
+			pr_warn(
+			    "some issue occured with linker debugger "
+			    "interaction, symbol debugging _may_ get affected");
+			return TRACEE_RUNNING;
+		}
+
+		pr_err("error in checking watchpoint");
+		return TRACEE_STOPPED;
+	}
+
+	// handle this address only if starting (need watch)
+	if (DLDEBUG_WATCH_ADDR(tracee, addr)) {
+		tracee->debug.need_watch = false;
+		tracee->debug.addr = new_val; // in failure we avoid this feat
+		if (sym_setup_dldebug(tracee) == -1) {
+			pr_warn(
+			    "some issue occured with linker debugger "
+			    "interaction, symbol debugging _may_ get affected");
+		}
+
+		// remove the watchpoint
+		watchpoint_delete(tracee, idx);
+
+		// resume the process
+		if (ptrace(PTRACE_CONT, tracee->pid, NULL, 0) == -1) {
+			pr_err("error in resuming tracee: %s", strerror(errno));
+			return TRACEE_STOPPED;
+		}
+
+		return TRACEE_RUNNING;
 	}
 
 	struct user_regs_struct regs;
 	if (ptrace(PTRACE_GETREGS, tracee->pid, NULL, &regs) == -1) {
 		pr_err("watchpoint_check_print: error in getting registers: %s",
 		    strerror(errno));
-		return true;
+		return TRACEE_STOPPED;
 	}
 
 	// TODO [WP_URG]: is the r/w instruction RIP ? Or one instr before RIP ?
@@ -211,8 +263,7 @@ bool watchpoint_check_print(tracee_t *tracee)
 	    idx, watchpoint_old_values[idx], new_val, regs.rip);
 
 	watchpoint_old_values[idx] = new_val;
-
-	return true;
+	return TRACEE_STOPPED;
 }
 
 int watchpoint_add(tracee_t *tracee, unsigned long long addr, bool write_only)

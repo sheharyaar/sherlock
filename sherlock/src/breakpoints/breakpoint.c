@@ -10,6 +10,7 @@
 #include <sherlock/breakpoint.h>
 #include <sherlock/sym.h>
 #include <errno.h>
+#include <link.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ptrace.h>
@@ -141,17 +142,13 @@ int breakpoint_resume(tracee_t *tracee)
 	return 0;
 }
 
-int breakpoint_handle(tracee_t *tracee)
+tracee_state_e breakpoint_handle(tracee_t *tracee)
 {
 	struct user_regs_struct regs;
 	if (ptrace(PTRACE_GETREGS, tracee->pid, NULL, &regs) == -1) {
 		pr_err("breakpoint_handle: error in getting registers: %s",
 		    strerror(errno));
-		return -1;
-	}
-
-	if (watchpoint_check_print(tracee)) {
-		return 0;
+		return TRACEE_STOPPED;
 	}
 
 	// check for SW breakpoint
@@ -169,7 +166,8 @@ int breakpoint_handle(tracee_t *tracee)
 	pr_debug("rip=%#llx", regs.rip);
 	if (!found) {
 		pr_debug("no breakpoint found for addr: %llx", regs.rip);
-		return 0;
+		pr_info_raw("tracee received signal: SIGTRAP\n");
+		return TRACEE_STOPPED;
 	}
 
 	++bp->counter;
@@ -179,20 +177,20 @@ int breakpoint_handle(tracee_t *tracee)
 	if (ptrace(PTRACE_POKETEXT, tracee->pid, bp->addr, val) == -1) {
 		pr_err("breakpoint_handle: ptrace POKETEXT err - %s",
 		    strerror(errno));
-		return -1;
+		return TRACEE_STOPPED;
 	}
 
 	regs.rip -= 1;
 	if (ptrace(PTRACE_SETREGS, tracee->pid, NULL, &regs) == -1) {
 		pr_err("breakpoint_handle: ptrace SETREGS error - %s",
 		    strerror(errno));
-		return -1;
+		return TRACEE_STOPPED;
 	}
 	pr_debug("rip_final=%#llx", regs.rip);
 
 	tracee->pending_bp = bp;
 
-	return 0;
+	return TRACEE_STOPPED;
 }
 
 void breakpoint_cleanup(tracee_t *tracee)
