@@ -32,7 +32,10 @@
 static tracee_t global_tracee = {
 	.bp_list = NULL,
 	.pending_bp = NULL,
-	.debug = { .addr = 0, .need_watch = false },
+	.debug = { .r_debug_addr = 0,
+	    .r_brk_addr = 0,
+	    .r_brk_val = 0,
+	    .need_watch = false },
 	.exe_path = { 0 },
 	.name = { 0 },
 	.pid = 0,
@@ -128,7 +131,6 @@ static tracee_state_e handle_stop(int wstatus)
 	}
 
 	// ignore single step stops
-	pr_debug("si_code=%d", si.si_code);
 	if (si.si_code == TRAP_HWBKPT) {
 		return watchpoint_handle(&global_tracee);
 	} else if (si.si_code == TRAP_TRACE) {

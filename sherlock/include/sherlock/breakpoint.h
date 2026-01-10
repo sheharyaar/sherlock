@@ -13,7 +13,9 @@
 #include <sherlock/sherlock.h>
 
 int breakpoint_add(tracee_t *tracee, unsigned long long bpaddr, symbol_t *sym);
-int breakpoint_resume(tracee_t *tracee);
+int breakpoint_pending(tracee_t *tracee);
+int breakpoint_update(
+    tracee_t *tracee, breakpoint_t *bp, unsigned long new_addr);
 tracee_state_e breakpoint_handle(tracee_t *tracee);
 void breakpoint_printall(tracee_t *tracee);
 void breakpoint_delete(tracee_t *tracee, unsigned int idx);

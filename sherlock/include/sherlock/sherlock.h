@@ -67,19 +67,29 @@ typedef struct MEM_MAP {
 	char path[SHERLOCK_MAX_STRLEN];
 } mem_map_t;
 
+typedef struct BREAKPOINT breakpoint_t;
+
 typedef struct SYMBOL {
 	// (elf) addr = va_base + rel_addr + rel_addend
 	unsigned long long addr;
 	unsigned long long base;
-	unsigned long long res_addr;
-	unsigned long long res_base;
+	struct GOT {
+		unsigned long long addr;
+		unsigned long long val;
+	} got;
 	unsigned long long size;
 	const char *name;
 	const char *file_name;
 	section_t *section;
 	mem_map_t *map;
+	breakpoint_t *bp;
 	UT_hash_handle hh;
 	bool dyn_sym;
+	// why seperate bool ? Once plt sym are upgraded to normal syms, we need
+	// to have a @plt sym too, which does not need to be resolved but must
+	// just be there, eg. puts gets resolved, then we have two symbols, puts
+	// and puts@plt.
+	bool needs_resolve;
 	// TODO [SYM_DUP]: duplicate symbols can cause incorrect PEEKTEXT,
 	// POKETEXT
 } symbol_t;
@@ -91,6 +101,7 @@ typedef struct BREAKPOINT {
 	struct BREAKPOINT *next;
 	unsigned int idx;
 	unsigned int counter;
+	bool is_plt_bp;
 } breakpoint_t;
 
 typedef struct TRACEE {
@@ -102,7 +113,9 @@ typedef struct TRACEE {
 	char name[SHERLOCK_MAX_STRLEN];
 	char exe_path[SHERLOCK_MAX_STRLEN];
 	struct _DEBUG {
-		unsigned long addr;
+		unsigned long r_debug_addr;
+		unsigned long r_brk_addr;
+		unsigned long r_brk_val;
 		bool need_watch;
 	} debug;
 } tracee_t;

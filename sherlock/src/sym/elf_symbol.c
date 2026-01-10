@@ -22,8 +22,7 @@ static unsigned long long plt_ent_start = 0UL;
 static unsigned long long plt_entsize = 0UL;
 struct Elf *elf = NULL;
 
-static section_t *sym_addr_section(
-    unsigned long long addr, unsigned long long size)
+section_t *sym_addr_section(unsigned long long addr, unsigned long long size)
 {
 	for (unsigned int i = 0; i < section_count; i++) {
 		if (addr >= section_list[i].start &&
@@ -40,6 +39,8 @@ static int sym_sort_cmp(void *a, void *b)
 	// decreasing order of addresses for easier overlapping interval calc
 	return ((symbol_t *)b)->addr - ((symbol_t *)a)->addr;
 }
+
+void sym_sort_trigger() { HASH_SORT(sherlock_symtab, sym_sort_cmp); }
 
 static void sym_freeall(void)
 {
@@ -59,11 +60,69 @@ void sym_printall(__attribute__((unused)) tracee_t *tracee)
 	int i = 0;
 	HASH_ITER(hh, sherlock_symtab, s, tmp)
 	{
-		pr_info_raw(
-		    "[%d] name=%s, addr=%#llx, base=%#llx, file_name=%s\n", i,
-		    s->name, s->addr, s->base, s->file_name);
+		if (s->dyn_sym) {
+			pr_info_raw("[%d] name=%s, addr=%#llx, got_val=%#llx, "
+				    "file_name=%s\n",
+			    i, s->name, s->addr, s->got.val, s->file_name);
+		} else {
+			pr_info_raw("[%d] name=%s, addr=%#llx, base=%#llx, "
+				    "file_name=%s\n",
+			    i, s->name, s->addr, s->base, s->file_name);
+		}
 		i++;
 	}
+}
+
+int sym_resolve_dyn(tracee_t *tracee)
+{
+	symbol_t *sym, *t;
+	HASH_ITER(hh, sherlock_symtab, sym, t)
+	{
+		if (!sym->dyn_sym || !sym->needs_resolve) {
+			continue;
+		}
+
+		long res_addr =
+		    ptrace(PTRACE_PEEKDATA, tracee->pid, sym->got.addr, 0);
+		if (res_addr == -1 || res_addr == 0) {
+			pr_err("error in reading GOT address : %s",
+			    strerror(errno));
+			return -1;
+		}
+
+		pr_debug("[DL CHECK] sym=%s, got_addr=%#llx, got_val=%#llx,  "
+			 "new_val=%#lx",
+		    sym->name, sym->got.addr, sym->got.val, res_addr);
+
+		if (sym->got.val == (unsigned long)res_addr) {
+			continue;
+		}
+
+		sym->got.val = res_addr;
+		// for PLT, we cant update the address, it will point to PLT[i]
+		// + 6
+		if (sym->addr != 0) {
+			continue;
+		}
+
+		SYM_UPDATE_ADDR(sym, res_addr);
+
+		pr_debug("[DL LOAD] symbol=%s, new_addr=%#llx", sym->name,
+		    sym->addr);
+
+		if (sym->bp != NULL) {
+			if (breakpoint_update(tracee, sym->bp, sym->addr) ==
+			    -1) {
+				pr_err("error in updating breakpoint");
+				return -1;
+			}
+		}
+
+		// TODO: create a new @plt sym and add to hashlist
+	}
+
+	HASH_SORT(sherlock_symtab, sym_sort_cmp);
+	return 0;
 }
 
 static int handle_dynamic_syms(__attribute__((unused)) tracee_t *tracee,
@@ -134,14 +193,9 @@ static int handle_dynamic_syms(__attribute__((unused)) tracee_t *tracee,
 		unsigned long long base = 0UL;
 		unsigned long long addr = 0UL;
 		if (GELF_R_TYPE(rela.r_info) == R_X86_64_JUMP_SLOT) {
-			// TODO [SYM_RES]: fix the base here
 			addr = plt_ent_start + plt_entsize * i;
 		} else if (GELF_R_TYPE(rela.r_info) == R_X86_64_GLOB_DAT) {
-			// TODO [SYM_RES]: the GOT address here will be 0,
-			// unless its loaded.
-			pr_err("skipping R_X86_64_GLOB_DAT for now");
-			continue;
-			;
+			addr = tracee->va_base + rela.r_offset;
 		} else {
 			// TODO [SYM_RES]: implement  RELATIVE
 			pr_err("type: %ld not implemented",
@@ -155,6 +209,14 @@ static int handle_dynamic_syms(__attribute__((unused)) tracee_t *tracee,
 			return -1;
 		}
 
+		long got_val = ptrace(PTRACE_PEEKTEXT, tracee->pid,
+		    tracee->va_base + rela.r_offset, 0);
+		if (got_val == -1) {
+			pr_err("error in getting GOT val for sym(%s): %s", name,
+			    strerror(errno));
+			return -1;
+		}
+
 		symbol_t *new_sym = calloc(1, sizeof(*new_sym));
 		if (!new_sym) {
 			pr_err("calloc for sym failed: %s", strerror(errno));
@@ -163,7 +225,11 @@ static int handle_dynamic_syms(__attribute__((unused)) tracee_t *tracee,
 
 		// dynamic symbols, file_name will be set after address
 		// gets resolved.
-		SHERLOCK_SYMBOL_DYN(new_sym, base, addr, name);
+		SHERLOCK_SYMBOL_DYN(new_sym, base, addr,
+		    tracee->va_base + rela.r_offset, got_val, name);
+		if (GELF_R_TYPE(rela.r_info) == R_X86_64_GLOB_DAT) {
+			new_sym->addr = 0;
+		}
 
 		pr_debug("[dynamic symbol] name=%s, addr=%#llx, "
 			 "base=%#llx, section=%s",
@@ -300,7 +366,7 @@ static int handle_dyn_linker(tracee_t *tracee, Elf_Scn *scn, Elf64_Shdr *hdr)
 
 	if (dyn_debug_data != 0) {
 		tracee->debug.need_watch = false; // data already present
-		tracee->debug.addr = dyn_debug_data;
+		tracee->debug.r_debug_addr = dyn_debug_data;
 		return sym_setup_dldebug(tracee);
 	}
 
@@ -311,7 +377,7 @@ static int handle_dyn_linker(tracee_t *tracee, Elf_Scn *scn, Elf64_Shdr *hdr)
 		return -1;
 	}
 
-	tracee->debug.addr = dyn_debug_addr;
+	tracee->debug.r_debug_addr = dyn_debug_addr;
 	tracee->debug.need_watch = true;
 
 	return 0;

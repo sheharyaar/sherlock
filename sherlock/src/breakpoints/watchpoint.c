@@ -207,7 +207,8 @@ int watchpoint_check(tracee_t *tracee, long *dst_addr, long *dst_data)
 }
 
 #define DLDEBUG_WATCH_ADDR(tracee, addr)                                       \
-	tracee->debug.need_watch && (unsigned long)addr == tracee->debug.addr
+	tracee->debug.need_watch &&                                            \
+	    (unsigned long)addr == tracee->debug.r_debug_addr
 
 tracee_state_e watchpoint_handle(tracee_t *tracee)
 {
@@ -217,7 +218,7 @@ tracee_state_e watchpoint_handle(tracee_t *tracee)
 	if (idx == -1) {
 		if (DLDEBUG_WATCH_ADDR(tracee, addr)) {
 			tracee->debug.need_watch = false;
-			tracee->debug.addr = 0UL;
+			tracee->debug.r_debug_addr = 0UL;
 			pr_warn(
 			    "some issue occured with linker debugger "
 			    "interaction, symbol debugging _may_ get affected");
@@ -231,7 +232,8 @@ tracee_state_e watchpoint_handle(tracee_t *tracee)
 	// handle this address only if starting (need watch)
 	if (DLDEBUG_WATCH_ADDR(tracee, addr)) {
 		tracee->debug.need_watch = false;
-		tracee->debug.addr = new_val; // in failure we avoid this feat
+		tracee->debug.r_debug_addr =
+		    new_val; // in failure we avoid this feat
 		if (sym_setup_dldebug(tracee) == -1) {
 			pr_warn(
 			    "some issue occured with linker debugger "

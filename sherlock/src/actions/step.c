@@ -14,8 +14,9 @@
 static tracee_state_e step(tracee_t *tracee, __attribute__((unused)) char *args)
 {
 	if (tracee->pending_bp) {
-		if (breakpoint_resume(tracee) == -1) {
-			pr_err("error when running tracee (breakpoint_resume)");
+		if (breakpoint_pending(tracee) == -1) {
+			pr_err(
+			    "error when running tracee (breakpoint_pending)");
 			return TRACEE_ERR;
 		}
 	}

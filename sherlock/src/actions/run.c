@@ -14,8 +14,9 @@
 static tracee_state_e run(tracee_t *tracee, __attribute__((unused)) char *args)
 {
 	if (tracee->pending_bp) {
-		if (breakpoint_resume(tracee) == -1) {
-			pr_err("error when running tracee (breakpoint_resume)");
+		if (breakpoint_pending(tracee) == -1) {
+			pr_err(
+			    "error when running tracee (breakpoint_pending)");
 			return TRACEE_ERR;
 		}
 	}
@@ -28,7 +29,12 @@ static tracee_state_e run(tracee_t *tracee, __attribute__((unused)) char *args)
 	return TRACEE_RUNNING;
 }
 
-static bool match_run(char *act) { return MATCH_STR(act, run); }
+static bool match_run(char *act)
+{
+	return MATCH_STR(act, run) || MATCH_STR(act, r) ||
+	    MATCH_STR(act, continue) || MATCH_STR(act, c);
+	;
+}
 
 static void help_action() { pr_info_raw("run\n"); }
 
