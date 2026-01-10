@@ -37,20 +37,13 @@
                                                                                \
 		/* get associated map */                                       \
 		mem_map_t *map = sym_proc_addr_map(_sym->addr, _sym->size);    \
-		if (map != NULL) {                                             \
+		if (map) {                                                     \
 			_sym->map = map;                                       \
 			_sym->file_name = map->path;                           \
-		} else {                                                       \
-			pr_warn("map for symbol(%s) is NULL", _sym->name);     \
-			return -1;                                             \
 		}                                                              \
                                                                                \
 		section_t *section = sym_addr_section(_sym->addr, _sym->size); \
-		if (!section) {                                                \
-			pr_err("section not found for symbol(%s)", name);      \
-			free(_sym);                                            \
-			return -1;                                             \
-		} else {                                                       \
+		if (section) {                                                 \
 			_sym->section = section;                               \
 		}                                                              \
                                                                                \
@@ -62,9 +55,10 @@
 	SHERLOCK_SYMBOL(                                                       \
 	    _sym, _base, _addr, 0UL, 0UL, _size, _name, false, false)
 
-#define SHERLOCK_SYMBOL_DYN(_sym, _base, _addr, _got_addr, _got_val, _name)    \
+#define SHERLOCK_SYMBOL_DYN(                                                   \
+    _sym, _base, _addr, _got_addr, _got_val, _name, _res)                      \
 	SHERLOCK_SYMBOL(                                                       \
-	    _sym, _base, _addr, _got_addr, _got_val, 0UL, _name, true, true)
+	    _sym, _base, _addr, _got_addr, _got_val, 0UL, _name, true, _res)
 
 void proc_cleanup(tracee_t *tracee);
 int sym_resolve_dyn(tracee_t *tracee);

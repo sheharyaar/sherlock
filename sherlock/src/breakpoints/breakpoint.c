@@ -128,7 +128,12 @@ create_bp:
 		}
 	}
 
-	pr_info_raw("Breakpoint %d added at address=%#llx\n", bp->idx, bpaddr);
+	if (bpaddr)
+		pr_info_raw(
+		    "Breakpoint %d added at address=%#llx\n", bp->idx, bpaddr);
+	else
+		pr_info_raw(
+		    "Breakpoint %d for '%s' added\n", bp->idx, sym->name);
 	return 0;
 }
 

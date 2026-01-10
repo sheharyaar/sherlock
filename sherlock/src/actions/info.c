@@ -27,11 +27,15 @@ static tracee_state_e info_addr(tracee_t *tracee, char *arg)
 	}
 
 	if (addr == sym->addr)
-		pr_info_raw("%s in section %s of %s\n", sym->name,
-		    sym->section->name, sym->file_name);
+		pr_info_raw("%s in ", sym->name);
 	else
-		pr_info_raw("%s + %lld in section %s of %s\n", sym->name,
-		    (addr - sym->addr), sym->section->name, sym->file_name);
+		pr_info_raw("%s + %lld in ", sym->name, (addr - sym->addr));
+
+	if (sym->section)
+		pr_info_raw(
+		    "section %s of %s\n", sym->section->name, sym->file_name);
+	else
+		pr_info_raw("%s\n", sym->file_name);
 
 	return TRACEE_STOPPED;
 }

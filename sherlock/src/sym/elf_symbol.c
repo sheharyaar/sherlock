@@ -57,9 +57,10 @@ static void sym_freeall(void)
 void sym_printall(__attribute__((unused)) tracee_t *tracee)
 {
 	symbol_t *s, *tmp;
-	int i = 0;
 	HASH_ITER(hh, sherlock_symtab, s, tmp)
 	{
+#ifdef DEBUG
+		int i = 0;
 		if (s->dyn_sym) {
 			pr_info_raw("[%d] name=%s, addr=%#llx, got_val=%#llx, "
 				    "file_name=%s\n",
@@ -70,6 +71,9 @@ void sym_printall(__attribute__((unused)) tracee_t *tracee)
 			    i, s->name, s->addr, s->base, s->file_name);
 		}
 		i++;
+#else
+		pr_info_raw("%s\n", s->name);
+#endif
 	}
 }
 
@@ -195,7 +199,7 @@ static int handle_dynamic_syms(__attribute__((unused)) tracee_t *tracee,
 		if (GELF_R_TYPE(rela.r_info) == R_X86_64_JUMP_SLOT) {
 			addr = plt_ent_start + plt_entsize * i;
 		} else if (GELF_R_TYPE(rela.r_info) == R_X86_64_GLOB_DAT) {
-			addr = tracee->va_base + rela.r_offset;
+			addr = 0;
 		} else {
 			// TODO [SYM_RES]: implement  RELATIVE
 			pr_err("type: %ld not implemented",
@@ -217,6 +221,19 @@ static int handle_dynamic_syms(__attribute__((unused)) tracee_t *tracee,
 			return -1;
 		}
 
+		bool res = true;
+		section_t *sec = sym_addr_section(got_val, 0);
+		if ((unsigned long)got_val > tracee->va_base) {
+			// if the address does not belong to PLT then load the
+			// sym directly
+			if (!sec) {
+				// does not belong to any section, so must be
+				// out of the binary
+				addr = (unsigned long)got_val;
+				res = false;
+			}
+		}
+
 		symbol_t *new_sym = calloc(1, sizeof(*new_sym));
 		if (!new_sym) {
 			pr_err("calloc for sym failed: %s", strerror(errno));
@@ -226,15 +243,12 @@ static int handle_dynamic_syms(__attribute__((unused)) tracee_t *tracee,
 		// dynamic symbols, file_name will be set after address
 		// gets resolved.
 		SHERLOCK_SYMBOL_DYN(new_sym, base, addr,
-		    tracee->va_base + rela.r_offset, got_val, name);
-		if (GELF_R_TYPE(rela.r_info) == R_X86_64_GLOB_DAT) {
-			new_sym->addr = 0;
-		}
+		    tracee->va_base + rela.r_offset, got_val, name, res);
 
 		pr_debug("[dynamic symbol] name=%s, addr=%#llx, "
-			 "base=%#llx, section=%s",
+			 "base=%#llx, got_addr=%#llx, got_val=%#llx",
 		    new_sym->name, new_sym->addr, new_sym->base,
-		    new_sym->section->name);
+		    new_sym->got.addr, new_sym->got.val);
 	}
 
 	return 0;

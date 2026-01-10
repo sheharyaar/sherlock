@@ -2,11 +2,11 @@
 
 A simple debugger using `ptrace` and other required techniques to debug Linux programs. Some features may not be implemented as this is only a learning project.
 
-> This is work in progress. Stay tuned for updates.
+> Milestone v0.1: basic funnctionalities done.
 
 ### Notes
 
-This project brought a lot of insights into how debuggers like GDB work under the hood. I became aware of some techniques used by debuggers to boost perfformance, like setting breakpoints by replacing instructions with INT instructions, using `/proc/<pid>/mem` for reading/writing memory, etc.
+This project brought a lot of insights into how debuggers like GDB work under the hood. I became aware of some techniques used by debuggers to boost performance, like setting breakpoints by replacing instructions with INT instructions, using `r_debug (DT_DEBUG)` for getting notified when new libraries are loaded, using `/proc/<pid>/mem` for reading/writing memory, etc.
 
 > A bit detailed blog post about the internals of this project is coming soon.
 

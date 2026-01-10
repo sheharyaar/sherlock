@@ -64,6 +64,13 @@ int tracee_setup_pid(tracee_t *tracee, int pid)
 		return -1;
 	}
 
+	// fetch the memory map base
+	if (sym_proc_map_setup(tracee) < 0) {
+		pr_err("could not get tracee memory VA base "
+		       "address, trace failed");
+		return -1;
+	}
+
 	// attach to the program, the tracee should be left in the stopped
 	// state, since the program is already running, unlike the exec case
 	return attach_and_stop(tracee, false);
