@@ -1,5 +1,7 @@
 > [!TIP]
 > Sherlock (debugger) is ready with basic funtionalities like breakpoint, backtrace, single-step, info, print (inspect), etc. Checkout the sherlock directory for more.
+>
+> I have also written a series of blog on some of the core concepts used in building the debugger. You can find it on my blog site: [Writing a Debugger form Scratch](https://www.sheharyaar.in/blog/writing-a-debugger-00)
 
 # Sherlock Project
 
