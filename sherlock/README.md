@@ -8,7 +8,7 @@ A simple debugger using `ptrace` and other required techniques to debug Linux pr
 
 This project brought a lot of insights into how debuggers like GDB work under the hood. I became aware of some techniques used by debuggers to boost performance, like setting breakpoints by replacing instructions with INT instructions, using `r_debug (DT_DEBUG)` for getting notified when new libraries are loaded, using `/proc/<pid>/mem` for reading/writing memory, etc.
 
-> A bit detailed blog post about the internals of this project is coming soon.
+> I have written a series of blog on some of the core concepts used in building the debugger. You can find it on my blog site: [Writing a Debugger form Scratch](https://www.sheharyaar.in/blog/writing-a-debugger-00)
 
 ### Pending Features (Not to be implemented / Nice to haves)
 
