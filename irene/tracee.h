@@ -36,5 +36,6 @@ int elf_plt_init(tracee_t *tracee);
 int elf_mem_va_base(tracee_t *tracee);
 char *elf_get_plt_name(tracee_t *tracee, unsigned long long addr);
 int elf_break_plt_all(tracee_t *tracee);
+int get_pid_exe_name(tracee_t *tracee);
 
 #endif

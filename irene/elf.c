@@ -17,6 +17,7 @@
 #include <sys/param.h>
 
 #define PID_MAP_STR "/proc/%d/maps"
+#define PROC_EXE "/proc/%d/exe"
 #define MAX_PLT_ENTRIES 1500
 
 static bool plt_sec_found = 0;
@@ -88,8 +89,6 @@ int elf_mem_va_base(tracee_t *tracee)
 	}
 
 	tracee->va_base = start;
-	tracee->plt_start += tracee->va_base;
-	tracee->plt_end += tracee->va_base;
 	pr_debug("start address=%#llx", tracee->va_base);
 	pr_debug("absolute plt_start=%#llx plt_end=%#llx", tracee->plt_start,
 	    tracee->plt_end);
@@ -98,6 +97,30 @@ file_out:
 	fclose(pid_maps_f);
 out:
 	free(pid_maps_filename);
+	return 0;
+}
+
+// Reads the /proc/<PID>/exe link and sets the tracee executable path.
+// Returns -1 on error.
+int get_pid_exe_name(tracee_t *tracee)
+{
+	// get the name of the file
+	char exe_link_file[256];
+
+	if (snprintf(exe_link_file, 256, PROC_EXE,
+		tracee->pid) < 0) {
+		pr_err("snprint failed: %s", strerror(errno));
+		return -1;
+	}
+
+	if (readlink(exe_link_file, tracee->file_name,
+		255) == -1) {
+		pr_err("readlink failed: %s", strerror(errno));
+		return -1;
+	}
+
+	tracee->file_name[255] = '\0';
+	pr_debug("file_name: %s", tracee->file_name);
 	return 0;
 }
 
@@ -180,8 +203,8 @@ int elf_plt_init(tracee_t *tracee)
 			if (!plt_sec_found) {
 				// lets keep the VA for now, then we will add
 				// base later
-				tracee->plt_start = hdr->sh_addr;
-				tracee->plt_end = hdr->sh_addr + hdr->sh_size;
+				tracee->plt_start = tracee->va_base + hdr->sh_addr;
+				tracee->plt_end = tracee->plt_start + hdr->sh_size;
 				tracee->plt_entsize = hdr->sh_entsize == 0
 				    ? hdr->sh_addralign
 				    : hdr->sh_entsize;
@@ -190,8 +213,8 @@ int elf_plt_init(tracee_t *tracee)
 
 		if (strcmp(".plt.sec", name) == 0) {
 			// lets keep the VA for now, then we will add base later
-			tracee->plt_start = hdr->sh_addr;
-			tracee->plt_end = hdr->sh_addr + hdr->sh_size;
+			tracee->plt_start = tracee->va_base + hdr->sh_addr;
+			tracee->plt_end = tracee->plt_start + hdr->sh_size;
 			tracee->plt_entsize = hdr->sh_entsize == 0
 			    ? hdr->sh_addralign
 			    : hdr->sh_entsize;

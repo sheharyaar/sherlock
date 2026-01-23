@@ -13,7 +13,6 @@
 #include <errno.h>
 #include <signal.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
@@ -44,9 +43,12 @@ static void handle_plt_call(tracee_t *tracee)
 	}
 
 continue_trace:
-	pr_info_raw("%s(%#llx , %#llx, %#llx, %#llx)\n",
-	    sym_name != NULL ? sym_name : "(\?\?)", regs.rdi, regs.rsi,
-	    regs.rdx, regs.rcx);
+	if (sym_name)
+		pr_library_call(
+		    sym_name, regs.rdi, regs.rsi, regs.rdx, regs.rcx);
+	else
+		pr_library_call(
+		    "(\?\?)", regs.rdi, regs.rsi, regs.rdx, regs.rcx);
 
 	// restore original val, format: cc 35 ca 2f 00 00 -> ff 35 ca 2f 00 00
 	// (in reverse due to endian order)
@@ -104,11 +106,6 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if (elf_plt_init(&tracee) < 0) {
-		pr_err("elf_plt_init failed");
-		exit(1);
-	}
-
 	if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
 		pr_err("SIGINT ignore failed: %s", strerror(errno));
 	}
@@ -141,6 +138,17 @@ int main(int argc, char *argv[])
 				pr_err("could not get tracee memory VA "
 				       "base "
 				       "address, trace failed");
+				goto err;
+			}
+
+			if (get_pid_exe_name(&tracee) == -1) {
+				pr_err(
+				    "error in getting exe name of the process");
+				goto err;
+			}
+
+			if (elf_plt_init(&tracee) < 0) {
+				pr_err("elf_plt_init failed");
 				goto err;
 			}
 

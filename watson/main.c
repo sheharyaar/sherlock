@@ -190,7 +190,6 @@ int main(int argc, char *argv[])
 			pr_err("waitpid err: %s", strerror(errno));
 			goto err;
 		}
-		pr_debug("waitpid syscall");
 
 		// Ptrace-stopped tracees are reported as returns with
 		// WIFSTOPPED(status) true. See manpage ptrace(2).

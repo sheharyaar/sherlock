@@ -40,10 +40,21 @@ static tracee_state_e info_addr(tracee_t *tracee, char *arg)
 	return TRACEE_STOPPED;
 }
 
+static tracee_state_e info_funcs(
+    tracee_t *tracee, __attribute__((unused)) char *args)
+{
+	sym_printall(tracee);
+	return TRACEE_STOPPED;
+}
+
 static tracee_state_e info_func(tracee_t *tracee, char *func)
 {
 	// TODO [SYM_RES]: print function (symbol)
 	// here we would require GOT resolution and memory map mapping
+	if (!func) {
+		return info_funcs(tracee, NULL);
+	}
+
 	symbol_t *sym = sym_lookup_name(tracee, func);
 	if (sym == NULL) {
 		pr_info_raw(
@@ -53,13 +64,6 @@ static tracee_state_e info_func(tracee_t *tracee, char *func)
 
 	pr_info_raw("Symbol '%s' is at '%#llx' in %s\n", func, sym->addr,
 	    sym->file_name);
-	return TRACEE_STOPPED;
-}
-
-static tracee_state_e info_funcs(
-    tracee_t *tracee, __attribute__((unused)) char *args)
-{
-	sym_printall(tracee);
 	return TRACEE_STOPPED;
 }
 

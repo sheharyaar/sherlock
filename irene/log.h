@@ -12,6 +12,13 @@
 
 #include <stdio.h>
 
+#define COLOR_RESET "\033[0m"
+#define COLOR_CALL "\033[1;32m"
+
+#define pr_library_call(func, arg1, arg2, arg3, arg4)                          \
+	fprintf(stdout,                                                        \
+	    COLOR_CALL "%s" COLOR_RESET "(%#llx, %#llx, %#llx, %#llx)\n",      \
+	    func, arg1, arg2, arg3, arg4)
 #define pr_err(fmt, ...) fprintf(stderr, "[ERR] " fmt "\n", ##__VA_ARGS__)
 #define pr_info(fmt, ...) fprintf(stdout, "[INF] " fmt "\n", ##__VA_ARGS__)
 #define pr_info_raw(fmt, ...) fprintf(stdout, fmt, ##__VA_ARGS__)

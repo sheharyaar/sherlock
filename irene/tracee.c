@@ -109,9 +109,6 @@ int tracee_setup(int argc, char *argv[], tracee_t *tracee)
 		}
 
 		tracee->pid = ret;
-		strncpy(tracee->file_name, argv[2], 256);
-		tracee->file_name[255] = '\0';
-
 		close(pipefd[0]);
 
 		if (attach_and_start(
